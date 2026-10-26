@@ -137,26 +137,38 @@ class PageParsesTests(unittest.TestCase):
         self.assertEqual(footer_count, 1)
         self.assertIn("GitHub Pages", self.html)
 
-    def test_all_seven_sections_are_present(self):
-        section_classes = ["band", "costs", "flow", "limits", "measures", "record", "question"]
+    def test_all_six_sections_are_present(self):
+        # Issue #1's mockup carried a seventh section, an open question about
+        # the product's name. Issue #6 settled that question (the founder
+        # renamed the repo) before this page was built, so there is no
+        # question section to fill -- the rename is a record entry instead.
+        section_classes = ["band", "costs", "flow", "limits", "measures", "record"]
         for name in section_classes:
             match = re.search(
                 rf'<section class="{name}"[^>]*>(.*?)</section>', self.html, re.DOTALL)
             self.assertIsNotNone(match, f"no section found for {name!r}")
 
-    def test_placeholder_sections_for_later_issues_are_still_empty(self):
-        # "band" and "costs" were filled in by issue #5 and are no longer
-        # placeholders; they have their own tests in test_status.py. The
-        # rest stay empty until issue #6 fills them.
-        section_classes = ["flow", "limits", "measures", "record", "question"]
+    def test_no_question_section(self):
+        # Kept separate from the six-sections test above so this has its own
+        # failure message: a stray leftover "question" section (reviving the
+        # mockup's now-settled naming question) would otherwise only show up
+        # as an unrelated miscount.
+        self.assertNotIn('<section class="question"', self.html)
+
+    def test_no_placeholder_sections_remain(self):
+        # Every section issue #4 stubbed out is now filled in: "band" and
+        # "costs" by issue #5, the rest by issue #6. None should still be an
+        # empty "<h2>...</h2>" shell or carry a "Filled in issue #N" comment.
+        self.assertNotIn("Filled in issue #", self.html)
+        section_classes = ["band", "costs", "flow", "limits", "measures", "record"]
         for name in section_classes:
             match = re.search(
                 rf'<section class="{name}"[^>]*>(.*?)</section>', self.html, re.DOTALL)
-            self.assertIsNotNone(match, f"no placeholder section for {name!r}")
+            self.assertIsNotNone(match, f"no section found for {name!r}")
             body = re.sub(r"<!--.*?-->", "", match.group(1), flags=re.DOTALL)
             body = re.sub(r"<h2[^>]*>.*?</h2>", "", body, flags=re.DOTALL)
-            self.assertEqual(body.strip(), "",
-                              f"section {name!r} should be an empty placeholder")
+            self.assertNotEqual(body.strip(), "",
+                                 f"section {name!r} is still an empty placeholder")
 
 
 class LinksAllowedTests(unittest.TestCase):

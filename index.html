@@ -111,6 +111,79 @@
   .ev-claim{margin:0 0 var(--s2); font-size:16px; line-height:1.5}
   .ev-src{font-family:var(--font-mono); font-size:11px; color:var(--ink-muted); letter-spacing:.02em}
 
+  /* --- how a change flows (issue #6) ----------------------------------- */
+  .rail{list-style:none; margin:0 0 var(--s5); padding:0; display:grid; gap:1px; background:var(--rule)}
+  .rail li{background:var(--paper); padding:var(--s3) 0; display:flex; gap:var(--s3); align-items:baseline}
+  .rail .who{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-muted);
+    flex:0 0 7.5em;
+  }
+  .rail .does{font-size:15px; line-height:1.5}
+  .rail .gate{color:var(--red); font-weight:600}
+  .note{font-size:14px; line-height:1.55; color:var(--ink-muted)}
+
+  /* --- what this is not (issue #6) -------------------------------------- */
+  .limits-box{background:var(--paper-sunk); padding:var(--s5); border-left:2px solid var(--rule-strong)}
+  .limits-box h3{font-size:17px; font-weight:600; margin:0 0 var(--s2); letter-spacing:-.01em}
+  .limits-box p:last-child{margin-bottom:0}
+
+  /* --- how we will know (issue #6) --------------------------------------- */
+  table{width:100%; border-collapse:collapse; font-size:15px}
+  caption{text-align:left; font-size:14px; color:var(--ink-muted); margin-bottom:var(--s3)}
+  th,td{text-align:left; padding:var(--s3) var(--s3) var(--s3) 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  th{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-muted);
+    font-weight:600;
+    border-bottom:1px solid var(--rule-strong);
+    white-space:nowrap;
+  }
+  td.figure{font-family:var(--font-mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .hit{color:var(--green); font-weight:600}
+  .pending{color:var(--ochre); font-weight:600}
+
+  /* The measures table becomes one block per measure below 860px: three
+     columns of prose at 390px is unreadable, and the bar and today's figure
+     matter more than their alignment. */
+  @media (max-width:859px){
+    table, caption, tbody, tr, td{display:block; width:auto}
+    thead{display:none}
+    tbody tr{padding:var(--s4) 0; border-bottom:1px solid var(--rule)}
+    tbody tr:last-child{border-bottom:0}
+    tbody td{border:0; padding:0}
+    tbody td:first-child{font-weight:600; margin-bottom:var(--s2)}
+    tbody td.figure{display:inline-block; margin-right:var(--s5); font-size:14px}
+    tbody td.figure::before{
+      content:attr(data-label);
+      display:block;
+      font-family:var(--font-mono);
+      font-size:10px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:var(--ink-muted);
+    }
+  }
+
+  /* --- the record of this build (issue #6) ------------------------------- */
+  .record-list{list-style:none; margin:0; padding:0}
+  .record-list li{display:grid; gap:var(--s1); padding:var(--s4) 0; border-bottom:1px solid var(--rule)}
+  .record-list li:last-child{border-bottom:0}
+  .record-list .when{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-muted);
+  }
+  .record-list p{margin:0; font-size:15px; line-height:1.55}
+
   @media (min-width:860px){
     body{font-size:18px}
     .shell{padding:0 var(--s7) var(--s9)}
@@ -129,6 +202,8 @@
     .ev{padding:var(--s5) var(--s5) var(--s5) 0}
     .ev:nth-child(even){padding-left:var(--s5); padding-right:0}
     .ev-figure{font-size:40px}
+
+    .rail li{padding:var(--s3) var(--s4) var(--s3) 0}
   }
 </style>
 </head>
@@ -172,16 +247,17 @@
         green.</span>
       </li>
       <li class="step">
-        <span class="step-top"><span class="dot dot-open"></span>Step 3</span>
+        <span class="step-top"><span class="dot dot-green"></span>Step 3</span>
         <span class="step-name">build runs to merge on real issues</span>
-        <span class="step-state running">Running · 2 of 3–5 · 26 Oct 2026</span>
-        <span class="step-check">Two runs have merged on real issues:
+        <span class="step-state">Done · 3 of 3–5 · 26 Oct 2026</span>
+        <span class="step-check">Three runs have merged on real issues:
         <a href="https://github.com/todd450/founding-agents-site/issues/4">issue #4</a>, built in
-        <a href="https://github.com/todd450/founding-agents-site/pull/7">PR #7</a>, and
+        <a href="https://github.com/todd450/founding-agents-site/pull/7">PR #7</a>;
         <a href="https://github.com/todd450/founding-agents-site/issues/5">issue #5</a>, built in
-        <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a> — this merge
-        itself. The rest of this site's three to five build issues, cut by hand from issue #1,
-        will add to the count.</span>
+        <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a>; and
+        <a href="https://github.com/todd450/founding-agents-site/issues/6">issue #6</a>, built in
+        this pull request — this merge itself. Three of the three to five build issues this step
+        needed are now in, so the step is done.</span>
       </li>
       <li class="step">
         <span class="step-top"><span class="dot dot-open"></span>Step 4</span>
@@ -230,27 +306,166 @@
 
   <section class="flow">
     <h2>How a change flows</h2>
-    <!-- Filled in issue #6. -->
+    <ol class="rail">
+      <li><span class="who">Product lead</span><span class="does">Writes the brief: who it is
+      for, the appetite, the no-gos.</span></li>
+      <li><span class="who">Designer</span><span class="does">Storyboards the journey and mocks
+      up two or three options at different stars.</span></li>
+      <li><span class="who">Founder</span><span class="does">Gets one queue item that fits one
+      sitting, and picks.</span></li>
+      <li><span class="who">Builder</span><span class="does">Builds one decided issue, in its own
+      worktree.</span></li>
+      <li><span class="who">Reviewer</span><span class="does">Reads the diff and the rendered
+      screens against the brief.</span></li>
+      <li><span class="who">Integrator</span><span class="does"><span class="gate">The only role
+      that merges.</span> Merges nothing while a <span class="num">red</span> issue is
+      open.</span></li>
+      <li><span class="who">Ops watch</span><span class="does">Every night, checks the Pages
+      deploy is green and every link on the site resolves. A failure opens one
+      <span class="num">red</span> issue; the next green run closes it.</span></li>
+    </ol>
+    <p class="note">The check is in this repo and can be read:
+    <a href="https://github.com/todd450/founding-agents-site/blob/main/.github/ops-watch/check_site.py">check_site.py</a>,
+    <a href="https://github.com/todd450/founding-agents-site/blob/main/.github/workflows/ops-watch.yml">ops-watch.yml</a>.</p>
   </section>
 
   <section class="limits">
     <h2>What this is not</h2>
-    <!-- Filled in issue #6. -->
+    <div class="limits-box">
+      <h3>No evidence that anyone besides the founder wants this.</h3>
+      <p>There is none yet, and this site cannot produce any. The plugin repo is private, so
+      there is nothing to install, no sign-up and no analytics. Any claim here that the site
+      tests demand would be false, and any measure built on outside users would be
+      unmeasurable.</p>
+      <p class="note">That question stays open. It is not what this bet answers.</p>
+    </div>
   </section>
 
   <section class="measures">
     <h2>How we will know</h2>
-    <!-- Filled in issue #6. -->
+    <table>
+      <caption>The site's job is to exercise the team, so the measures are the team's.</caption>
+      <thead>
+        <tr><th scope="col">Measure</th><th scope="col">Bar</th><th scope="col">26 Oct 2026</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Merges not made by the integrator</td>
+          <td class="figure" data-label="Bar">0</td>
+          <td class="figure hit" data-label="26 Oct">0</td>
+        </tr>
+        <tr>
+          <td><span class="num">build</span> ran to merge on real site issues</td>
+          <td class="figure" data-label="Bar">3–5</td>
+          <td class="figure hit" data-label="26 Oct">3</td>
+        </tr>
+        <tr>
+          <td><span class="num">propose</span> reached the founder as one queue item, one
+          sitting</td>
+          <td class="figure" data-label="Bar">2 issues</td>
+          <td class="figure pending" data-label="26 Oct">1</td>
+        </tr>
+        <tr>
+          <td>Lines deleted within two weeks of being written</td>
+          <td class="figure" data-label="Bar">falling</td>
+          <td class="figure pending" data-label="26 Oct">first week</td>
+        </tr>
+        <tr>
+          <td>Age of the oldest open <span class="num">red</span> issue</td>
+          <td class="figure" data-label="Bar">hours, not days</td>
+          <td class="figure hit" data-label="26 Oct">none open</td>
+        </tr>
+        <tr>
+          <td>Stars, traffic, installs</td>
+          <td class="figure" data-label="Bar">not a measure</td>
+          <td class="figure" data-label="26 Oct">—</td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 
   <section class="record">
     <h2>The record of this build</h2>
-    <!-- Filled in issue #6. -->
-  </section>
-
-  <section class="question">
-    <h2>Open question</h2>
-    <!-- Filled in issue #6. -->
+    <p class="col">Written as it happens, not afterwards. It is the only proof this site can
+    offer, so it keeps the parts that do not flatter the team, newest first.</p>
+    <ol class="record-list">
+      <li>
+        <span class="when">26 Oct 2026 · this build</span>
+        <p>Issue #6 filled in the last four sections: how a change flows, what this is not, the
+        measures table and this record. It drops the mockup's open question about the product's
+        name — the rename below settled that before this issue was built — and records the
+        rename here instead. Built in this pull request, which is also the third real site issue
+        through <span class="num">build</span> to merge, closing build step 3 at 3 of 3–5.</p>
+      </li>
+      <li>
+        <span class="when">26 Oct 2026 · issue #5's review caught its own blind spot</span>
+        <p><a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a> filled in
+        the status band and the four costs for
+        <a href="https://github.com/todd450/founding-agents-site/issues/5">issue #5</a>. Its
+        review found that step 3 named only PR #7's merge, though PR #8 was itself a second real
+        merge that would have falsified "1 of 3–5" the moment it landed; that the step test could
+        not tell four copies of the same step apart; and that the live red-line check's only text
+        test was the substring "blocked", which "Nothing is blocked" also contains. All three
+        were fixed before merge.</p>
+      </li>
+      <li>
+        <span class="when">26 Oct 2026 · the repo and the page both became Founding Agents</span>
+        <p>During issue #4's review the founder renamed this repository from
+        <span class="num">agent-team-site</span> to <span class="num">founding-agents-site</span>
+        and moved its GitHub Pages address to match, settling the mockup's one open question
+        about what this product is called. Repository settings are not public, so this line
+        carries a date and no link.</p>
+      </li>
+      <li>
+        <span class="when">26 Oct 2026 · issue #4 took three rounds of review</span>
+        <p><a href="https://github.com/todd450/founding-agents-site/pull/7">PR #7</a> added the
+        design tokens and the page shell for
+        <a href="https://github.com/todd450/founding-agents-site/issues/4">issue #4</a>. Review
+        found the colour and font checks missed inline <span class="num">style=</span>
+        attributes and extra <span class="num">&lt;style&gt;</span> blocks, the link checks let
+        protocol-relative URLs through, and a page-level override could still smuggle in a
+        literal colour or font while every test passed — each was fixed, then the founder
+        narrowed the suite, dropping a full CSS-linter check that was never in the issue's
+        appetite.</p>
+      </li>
+      <li>
+        <span class="when">26 Oct 2026 · the rule that would have frozen every merge</span>
+        <p>The brief nearly shipped the rule "every claim links to a file or merged PR in the
+        plugin repo." That repo is private and the nightly check crawls every link with no
+        credentials, so each link would answer 404, open <span class="num">red</span>, and stop
+        the integrator merging anything. Replaced before it reached
+        <a href="https://github.com/todd450/founding-agents-site/issues/1">the brief</a>: claims
+        link to this repo's own public files, PRs and issues, or they carry a date and no
+        link.</p>
+      </li>
+      <li>
+        <span class="when">26 Oct 2026 · the order bent</span>
+        <p><a href="https://github.com/todd450/founding-agents-site/issues/1">This brief</a> was
+        played by hand on 24 Oct, before <span class="num">propose</span> existed as a run. The
+        product lead rewrote it on 26 Oct, so the lane's first real run is a re-run of an
+        already-decided brief. The 24 Oct decision and the 25 Oct change stay in the issue's
+        comments rather than being tidied away.</p>
+      </li>
+      <li>
+        <span class="when">25 Oct 2026 · the premise changed after the decision</span>
+        <p>The site was decided go on 24 Oct with a target of five outside users in four weeks.
+        The plugin repo stayed private, so the target became unmeasurable and the launch page had
+        no reader. The bet was cut to a test bed at one day instead of being kept alive on a
+        target nobody could check.</p>
+      </li>
+      <li>
+        <span class="when">25 Oct 2026 · roles that did not exist yet</span>
+        <p><span class="num">build</span> and <span class="num">propose</span> had run only on
+        throwaway repos. Steps 3 and 4 had no real product to run on, which is the job this site
+        took.</p>
+      </li>
+      <li>
+        <span class="when">24 Oct 2026 · protection worked by surprise</span>
+        <p>Branch protection on <span class="num">main</span> blocked a builder session's push
+        before the builder knew the rule existed. It is the behaviour the team wanted, found the
+        way nobody plans for.</p>
+      </li>
+    </ol>
   </section>
 
   <footer>
