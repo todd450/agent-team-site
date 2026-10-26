@@ -81,6 +81,15 @@ class FlowSectionTests(unittest.TestCase):
         self.assertIn(REPO_PREFIX + "blob/main/.github/ops-watch/check_site.py", self.flow)
         self.assertIn(REPO_PREFIX + "blob/main/.github/workflows/ops-watch.yml", self.flow)
 
+    def test_linked_repo_files_actually_exist(self):
+        # These two links point at files in this repo rather than at an
+        # issue or PR, so nothing else checks the path is still there to be
+        # served -- check_site.py in particular is copied in by the
+        # plugin's setup skill and can move without anyone touching this
+        # page.
+        self.assertTrue((ROOT / ".github" / "ops-watch" / "check_site.py").is_file())
+        self.assertTrue((ROOT / ".github" / "workflows" / "ops-watch.yml").is_file())
+
     def test_every_link_in_flow_stays_in_this_repo(self):
         links = re.findall(r'href="([^"]+)"', self.flow)
         self.assertTrue(links, "expected at least one link in the flow section")
@@ -104,6 +113,46 @@ class LimitsSectionTests(unittest.TestCase):
         # that can be checked against a file, issue or PR -- it carries no
         # link, same rule as the four costs.
         self.assertNotIn("<a ", self.limits)
+
+
+STYLE_BLOCK_RE = re.compile(r"<style[^>]*>(.*?)</style>", re.DOTALL)
+CSS_RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+
+
+class ResponsiveMeasureTests(unittest.TestCase):
+    """Every other paragraph on the page is capped to the mockup's measure
+    (section > .body{max-width:var(--measure)}), but at >=860px this PR's
+    two new blocks -- the limits box and the record's entries -- have
+    nothing capping their width, so they'd run the full shell width while
+    the paragraph right above each one stays capped to the measure."""
+
+    def setUp(self):
+        self.html = read(INDEX_HTML)
+        match = STYLE_BLOCK_RE.search(self.html)
+        self.assertIsNotNone(match, "no <style> block found")
+        self.style = match.group(1)
+
+    def _rule_bodies(self, selector_fragment):
+        for selectors, body in CSS_RULE_RE.findall(self.style):
+            parts = [p.strip() for p in selectors.split(",")]
+            if any(selector_fragment in part for part in parts):
+                yield body
+
+    def _is_capped_to_the_measure(self, selector_fragment):
+        return any("max-width" in body and "var(--measure)" in body
+                   for body in self._rule_bodies(selector_fragment))
+
+    def test_limits_box_prose_is_capped_to_the_measure(self):
+        self.assertTrue(
+            self._is_capped_to_the_measure(".limits-box"),
+            ".limits-box has no max-width:var(--measure), so it runs the full shell width "
+            "while the paragraph above it is capped")
+
+    def test_record_list_entries_are_capped_to_the_measure(self):
+        self.assertTrue(
+            self._is_capped_to_the_measure(".record-list"),
+            ".record-list has no max-width:var(--measure), so its entries run the full shell "
+            "width while the record's own intro paragraph is capped")
 
 
 class MeasuresSectionTests(unittest.TestCase):
@@ -145,17 +194,28 @@ class RecordSectionTests(unittest.TestCase):
         day, month, year = DATE_RE.search(text).groups()
         return datetime.strptime(f"{day} {month} {year}", "%d %b %Y")
 
+    def _li_count(self):
+        return len(re.findall(r"<li>", self.record))
+
     def test_every_entry_has_a_dated_when_and_some_text(self):
+        li_count = self._li_count()
+        self.assertTrue(li_count, "no record entries found")
         entries = re.findall(r'<span class="when">(.*?)</span>\s*<p>(.*?)</p>',
                               self.record, re.DOTALL)
-        self.assertTrue(entries, "no record entries found")
+        self.assertEqual(len(entries), li_count,
+                          f"expected every one of the {li_count} <li> entries to produce a "
+                          f"dated when and some text, got {len(entries)}")
         for when, body in entries:
             self.assertRegex(when, DATE_RE, f"record entry has no date: {when!r}")
             self.assertTrue(strip_tags(body), f"record entry has no text: {when!r}")
 
     def test_record_is_newest_first(self):
-        whens = re.findall(r'<span class="when">(.*?)</span>', self.record)
-        self.assertTrue(whens, "no record entries found")
+        li_count = self._li_count()
+        self.assertTrue(li_count, "no record entries found")
+        whens = re.findall(r'<span class="when">(.*?)</span>', self.record, re.DOTALL)
+        self.assertEqual(len(whens), li_count,
+                          f"expected every one of the {li_count} <li> entries to produce a "
+                          f"parsed, dated when, got {len(whens)}")
         dates = [self._parse_date(when) for when in whens]
         self.assertEqual(dates, sorted(dates, reverse=True),
                           "record entries are not in newest-first date order")
