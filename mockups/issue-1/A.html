@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Option A — One dated page — Founding Agents</title>
+<style>
+/* ---------------------------------------------------------------------------
+   Founding Agents — design tokens.
+   Proposed here, in option A, as one file: tokens.css. Options B and C use
+   this same block unchanged. Nothing on the page sets a colour, a size or a
+   face outside these names.
+   --------------------------------------------------------------------------- */
+:root{
+  --paper:#FBF9F4;
+  --paper-sunk:#F3EFE5;
+  --ink:#14130E;
+  --ink-muted:#5B5648;
+  --rule:#DCD6C6;
+  --rule-strong:#B9B19C;
+  --green:#1F5D3F;
+  --red:#A3161C;
+  --ochre:#7E5A08;
+  --font-text:ui-serif,"Iowan Old Style",Georgia,"Times New Roman",serif;
+  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
+  --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  --radius:2px;
+  --measure:33em;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-text); font-size:17px; line-height:1.62;
+}
+
+/* Mockup chrome — not part of the page. Marks which option this is. */
+.chrome{
+  background:var(--ink); color:var(--paper);
+  font-family:var(--font-mono); font-size:11px; line-height:1.5;
+  letter-spacing:.04em; padding:var(--s2) var(--s4);
+}
+.chrome b{font-weight:600}
+
+.page{max-width:var(--measure); margin:0 auto; padding:var(--s7) var(--s5) var(--s8)}
+
+.eyebrow{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-muted); margin:0 0 var(--s3);
+}
+h1{
+  font-size:30px; line-height:1.22; letter-spacing:-.015em;
+  font-weight:600; margin:0 0 var(--s4);
+}
+h2{
+  font-size:15px; font-family:var(--font-mono); font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase;
+  margin:var(--s8) 0 var(--s4); padding-bottom:var(--s2);
+  border-bottom:1px solid var(--rule-strong);
+}
+h3{font-size:18px; font-weight:600; margin:var(--s5) 0 var(--s1); letter-spacing:-.01em}
+p{margin:0 0 var(--s4)}
+.lede{font-size:19px; color:var(--ink-muted)}
+a{color:var(--ink); text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:2px}
+a:hover{text-decoration-color:var(--green)}
+
+ul{margin:0 0 var(--s4); padding:0; list-style:none}
+li{margin:0 0 var(--s3); padding-left:var(--s5); position:relative}
+li::before{
+  content:"—"; position:absolute; left:0; top:0;
+  color:var(--rule-strong); font-family:var(--font-mono);
+}
+.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums}
+.date{font-family:var(--font-mono); font-size:12px; color:var(--ink-muted); letter-spacing:.02em}
+.note{font-size:14px; color:var(--ink-muted)}
+.rule{border:0; border-top:1px solid var(--rule); margin:var(--s7) 0}
+
+.status{
+  border-top:2px solid var(--ink); border-bottom:1px solid var(--rule);
+  padding:var(--s4) 0 var(--s5); margin:var(--s6) 0 0;
+}
+.status p:last-child{margin-bottom:0}
+
+.flow{font-family:var(--font-mono); font-size:13px; line-height:2; color:var(--ink)}
+.flow span{color:var(--rule-strong); padding:0 var(--s1)}
+
+footer{
+  margin-top:var(--s8); padding-top:var(--s4);
+  border-top:1px solid var(--rule);
+  font-size:14px; color:var(--ink-muted);
+}
+
+/* Mockup concession, not a rule for the built page: the phone screenshot is a 390px crop of a
+   window Chrome will not shrink below 500px, so at phone widths the page is capped at 390 and
+   left-aligned. On a 390px phone that is simply the full width. */
+@media (max-width:759px){
+  body{max-width:390px; margin:0}
+}
+
+@media (min-width:760px){
+  body{font-size:18px; max-width:none}
+  .page{max-width:40em; padding:var(--s9) var(--s7) var(--s9)}
+  h1{font-size:42px}
+  .lede{font-size:21px}
+}
+</style>
+</head>
+<body>
+
+<div class="chrome">MOCKUP &nbsp;·&nbsp; issue #1 &nbsp;·&nbsp; option <b>A — One dated page</b> &nbsp;·&nbsp; 2 stars &nbsp;·&nbsp; ~2 hours of team time, one build issue</div>
+
+<main class="page">
+
+  <p class="eyebrow">Founding Agents</p>
+  <h1>An agent team that proposes, builds and merges one change at a time.</h1>
+  <p class="lede">This site is the team's test bed, not a launch. The plugin repo is private, so there
+  is nothing here to install and nobody but the founder is meant to read this. The site's job is to
+  give <span class="num">build</span> and <span class="num">propose</span> real changes to run on, in
+  public, where every claim has to survive a reader who can check it.</p>
+
+  <div class="status">
+    <p><strong>Status as of 26 October 2026.</strong> Build steps 1 and 2 are done; steps 3 and 4 are
+    running on this site. Step 1, branch protection on <span class="num">main</span>, closed 24 Oct:
+    <span class="num">main</span> requires a pull request with admins included, and a builder
+    session's push was blocked. Step 2, ops watch's nightly site check, closed 25 Oct: it was
+    installed by <span class="num">setup</span> in
+    <a href="https://github.com/todd450/agent-team-site/pull/2">PR&nbsp;#2</a>, its first run on
+    GitHub was green, and a red run by hand opened
+    <a href="https://github.com/todd450/agent-team-site/issues/3">issue&nbsp;#3</a>, kept it current
+    and closed it on green on 26 Oct. Step 3, <span class="num">build</span> running to merge on
+    three to five real site issues, and step 4, <span class="num">propose</span> running on this
+    brief and one more, are both open.</p>
+    <p class="note">Written by hand from this repo's
+    <a href="https://github.com/todd450/agent-team-site/issues">issues</a> and
+    <a href="https://github.com/todd450/agent-team-site/pulls?q=is%3Apr+is%3Amerged">merged pull
+    requests</a>, which are public and can be checked against this paragraph. No open
+    <span class="num">red</span> issue at the time of writing.</p>
+  </div>
+
+  <h2>The four costs</h2>
+  <p>Each of these is real in one founder's history, measured in that founder's own repositories and
+  recorded in the design doc. The doc is in a private repo, so these carry a date and no link.</p>
+  <ul>
+    <li><strong>Volume nobody can read.</strong> <span class="num">5,410</span> commits in under five
+    months. <span class="date">Recorded 26 Oct 2026</span></li>
+    <li><strong>Work undone as fast as it was done.</strong> <span class="num">32</span> removal
+    commits deleted <span class="num">61,365</span> lines in eight days.
+    <span class="date">Recorded 26 Oct 2026</span></li>
+    <li><strong>Sweeping up after the fact.</strong> <span class="num">731</span> bug-sweep and audit
+    commits. <span class="date">Recorded 26 Oct 2026</span></li>
+    <li><strong>Nobody watching.</strong> A nightly off-site backup failed all
+    <span class="num">28</span> of its runs, unnoticed.
+    <span class="date">Recorded 26 Oct 2026</span></li>
+  </ul>
+
+  <h2>How a change flows</h2>
+  <p class="flow">idea <span>→</span> product lead's brief <span>→</span> designer's mockups
+  <span>→</span> one queue item <span>→</span> founder decides <span>→</span> builder, in its own
+  worktree <span>→</span> reviewer <span>→</span> integrator merges</p>
+  <p>The integrator is the only role that merges. Ops watch runs a check every night; while a
+  <span class="num">red</span> issue is open, nothing merges at all. The check is in this repo:
+  <a href="https://github.com/todd450/agent-team-site/blob/main/.github/ops-watch/check_site.py">check_site.py</a>
+  and <a href="https://github.com/todd450/agent-team-site/blob/main/.github/workflows/ops-watch.yml">ops-watch.yml</a>.</p>
+
+  <h2>What this is not evidence of</h2>
+  <p>That anyone besides the founder wants the plugin or this site. There is no evidence of that yet
+  and this site cannot produce any: the plugin repo is private, so there is nothing to install. Any
+  claim here that the site tests demand would be false. That question stays open and is not what this
+  bet answers.</p>
+
+  <h2>The record of this build</h2>
+  <ul>
+    <li>24 Oct — protection on <span class="num">main</span> blocked a builder session's push before
+    the builder knew the rule existed. It worked, and it worked by surprise.</li>
+    <li>25 Oct — the brief's premise changed after it had already been decided go. The 24 Oct
+    decision carried a target of five outside users; the plugin stayed private, so the target became
+    unmeasurable. The brief was rewritten rather than quietly kept.</li>
+    <li>25 Oct — <span class="num">build</span> and <span class="num">propose</span> had run only on
+    throwaway repos. Steps 3 and 4 were not done, and this site is the first real thing to run them
+    on.</li>
+    <li>26 Oct — the brief nearly shipped a rule that would have frozen every merge: "every claim
+    links to a file or merged PR" in the private plugin repo. Ops watch crawls every link with no
+    credentials, so each one would answer 404 and open <span class="num">red</span>. Caught before it
+    reached the page.</li>
+  </ul>
+
+  <h2>How we will know it worked</h2>
+  <ul>
+    <li>Merges not made by the integrator: <span class="num">0</span>.</li>
+    <li><span class="num">build</span> ran to merge on three to five real site issues.</li>
+    <li><span class="num">propose</span> reached the founder as one queue item per issue, each fitting
+    one sitting.</li>
+    <li>Lines deleted within two weeks of being written falls.</li>
+    <li>The oldest open <span class="num">red</span> issue is hours old, not days. Issue&nbsp;#3 was
+    opened and closed inside a day; that is the bar.</li>
+    <li>Not a measure: stars, traffic, or anyone installing anything.</li>
+  </ul>
+
+  <hr class="rule">
+
+  <p class="note"><strong>One open question for the founder.</strong> The plugin was renamed to
+  Founding Agents; this repo is still <span class="num">agent-team-site</span> and the brief still
+  says "Agent Team". This page uses Founding Agents. One line settles it. Renaming the repo and its
+  Pages address is outside this appetite.</p>
+
+  <footer>
+    Served from this repository by GitHub Pages at
+    <a href="https://todd450.github.io/agent-team-site/">todd450.github.io/agent-team-site</a>.
+    Checked every night. Last written by hand on 26 October 2026.
+  </footer>
+
+</main>
+</body>
+</html>
