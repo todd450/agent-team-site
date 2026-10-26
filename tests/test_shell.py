@@ -1,10 +1,12 @@
 """Tests for the page shell built in issue #4: index.html and tokens.css.
 
-- The page parses as HTML with a header, placeholder sections and a footer.
+- The page parses as HTML with a header, placeholder sections and a footer,
+  with every tag properly nested and closed.
 - Every link on the page goes only to this repo's public files, issues and
   PRs, or to the site's own address (never into the private plugin repo or
   anywhere else).
-- No colour or font is used on the page that is not named in tokens.css.
+- No colour or font is used on the page, in any <style> block or any style=
+  attribute, that is not named in tokens.css.
 """
 
 import re
@@ -24,6 +26,13 @@ ALLOWED_LINK_PREFIXES = (
 LINK_ATTRS = {"a": "href", "link": "href", "img": "src", "script": "src", "source": "src",
               "iframe": "src"}
 
+# Elements that never get a matching end tag, so they must not be pushed
+# onto the open-tag stack used to check that every tag closes.
+VOID_ELEMENTS = {
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr",
+}
+
 
 class PageParser(HTMLParser):
     """Collects the tag/attribute shape of the page so tests can inspect it."""
@@ -32,25 +41,29 @@ class PageParser(HTMLParser):
         super().__init__()
         self.tags = []  # (tag, attrs dict) in document order
         self.links = []  # every href/src found on the page
-        self._text_by_tag = {}
-        self._stack = []
+        self.text_by_tag = {}  # tag name -> list of text chunks found inside it
+        self.stack = []  # open, non-void tags waiting for their end tag
+        self.mismatched_end_tags = []  # end tags that didn't match the top of the stack
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         self.tags.append((tag, attrs))
-        self._stack.append(tag)
+        if tag not in VOID_ELEMENTS:
+            self.stack.append(tag)
         value = attrs.get(LINK_ATTRS.get(tag, ""))
         if value:
             self.links.append(value.strip())
 
     def handle_endtag(self, tag):
-        if self._stack and self._stack[-1] == tag:
-            self._stack.pop()
+        if self.stack and self.stack[-1] == tag:
+            self.stack.pop()
+        else:
+            self.mismatched_end_tags.append(tag)
 
     def handle_data(self, data):
-        if self._stack:
-            current = self._stack[-1]
-            self._text_by_tag.setdefault(current, []).append(data)
+        if self.stack:
+            current = self.stack[-1]
+            self.text_by_tag.setdefault(current, []).append(data)
 
 
 def parse(html):
@@ -64,19 +77,20 @@ def read(path):
     return path.read_text(encoding="utf-8")
 
 
-class PageParsesTests(unittest.TestCase):
-    def setUp(self):
-        self.html = read(INDEX_HTML)
-        self.page = parse(self.html)
+class FilesExistTests(unittest.TestCase):
+    """Kept in its own class, with no setUp that reads the files, so this
+    test can actually fail on its own if a file goes missing rather than
+    always being pre-empted by another test's setUp."""
 
     def test_files_exist(self):
         self.assertTrue(INDEX_HTML.is_file())
         self.assertTrue(TOKENS_CSS.is_file())
 
-    def test_parser_reaches_the_end_without_error(self):
-        # HTMLParser raises on malformed markup it cannot recover from; feeding
-        # the whole document and closing it is enough to prove it parses.
-        parse(self.html)
+
+class PageParsesTests(unittest.TestCase):
+    def setUp(self):
+        self.html = read(INDEX_HTML)
+        self.page = parse(self.html)
 
     def test_has_one_doctype_html_head_and_body(self):
         tags = [tag for tag, _ in self.page.tags]
@@ -84,6 +98,14 @@ class PageParsesTests(unittest.TestCase):
         self.assertEqual(tags.count("head"), 1)
         self.assertEqual(tags.count("body"), 1)
         self.assertTrue(self.html.strip().lower().startswith("<!doctype html>"))
+
+    def test_page_tags_are_all_properly_nested_and_closed(self):
+        # Every non-void start tag must be matched by an end tag in the
+        # right place: nothing left open, and no end tag that closes the
+        # wrong element.
+        self.assertEqual(self.page.mismatched_end_tags, [],
+                          f"mismatched end tag(s): {self.page.mismatched_end_tags}")
+        self.assertEqual(self.page.stack, [], f"unclosed tag(s): {self.page.stack}")
 
     def test_links_the_one_token_source(self):
         stylesheet_links = [attrs.get("href") for tag, attrs in self.page.tags
@@ -95,6 +117,8 @@ class PageParsesTests(unittest.TestCase):
         self.assertEqual(len(headers), 1)
         h1_count = sum(1 for tag, _ in self.page.tags if tag == "h1")
         self.assertEqual(h1_count, 1)
+        headline_text = "".join(self.page.text_by_tag.get("h1", [])).strip()
+        self.assertTrue(headline_text, "the h1 headline has no text")
         self.assertIn("test bed", self.html)
         self.assertIn("not a launch", self.html)
 
@@ -119,14 +143,30 @@ class LinksAllowedTests(unittest.TestCase):
     def setUp(self):
         self.page = parse(read(INDEX_HTML))
 
+    @staticmethod
+    def _matches_allowed_prefix(link):
+        # A prefix match is only real if the next character is a path,
+        # query or fragment separator (or the link ends there) -- otherwise
+        # "...agent-team-site" also matches the unrelated, non-existent
+        # "...agent-team-site-evil".
+        for prefix in ALLOWED_LINK_PREFIXES:
+            if not link.startswith(prefix):
+                continue
+            rest = link[len(prefix):]
+            if rest == "" or rest[0] in "/?#":
+                return True
+        return False
+
     def test_every_link_is_relative_or_to_this_repo_or_its_pages_site(self):
         self.assertTrue(self.page.links, "expected at least one link on the page")
         for link in self.page.links:
+            if link.startswith("//"):
+                self.fail(f"protocol-relative link leaves this site: {link!r}")
             if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", link) and not link.startswith(("http://", "https://")):
                 self.fail(f"link uses a disallowed scheme: {link!r}")
             if link.startswith(("http://", "https://")):
                 self.assertTrue(
-                    link.startswith(ALLOWED_LINK_PREFIXES),
+                    self._matches_allowed_prefix(link),
                     f"link leaves this repo's public pages: {link!r}",
                 )
             else:
@@ -138,17 +178,38 @@ class LinksAllowedTests(unittest.TestCase):
             self.assertNotIn("founding-agents", link.lower())
 
 
+# Properties whose VALUE must never be a literal colour -- only a
+# var(--token) from tokens.css. Matched by substring so related longhands
+# (background-color, border-bottom, text-decoration-color, outline-color,
+# ...) are covered too.
+COLOUR_PROPERTY_RE = re.compile(r"color|background|border|outline", re.IGNORECASE)
+NAMED_COLOURS = ("white", "black", "red", "green", "blue", "gray", "grey")
+
+STYLE_BLOCK_RE = re.compile(r"<style[^>]*>(.*?)</style>", re.DOTALL)
+CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+DECLARATION_RE = re.compile(r"([a-zA-Z-]+)\s*:\s*([^;{}]+)")
+
+
 class TokensOnlyTests(unittest.TestCase):
     def setUp(self):
         self.tokens_css = read(TOKENS_CSS)
         self.html = read(INDEX_HTML)
-        self.style_block = self._extract_style_block(self.html)
+        self.page = parse(self.html)
+        self.style_text = self._collect_style_text(self.html, self.page)
+        self.declarations = DECLARATION_RE.findall(self.style_text)
 
     @staticmethod
-    def _extract_style_block(html):
-        match = re.search(r"<style[^>]*>(.*?)</style>", html, re.DOTALL)
-        assert match, "index.html has no <style> block to check"
-        return match.group(1)
+    def _collect_style_text(html, page):
+        # Every <style> block (not just the first) plus every style=
+        # attribute found anywhere on the page -- those are the only two
+        # places CSS can live on this page.
+        blocks = STYLE_BLOCK_RE.findall(html)
+        style_attrs = [attrs["style"] for _, attrs in page.tags if attrs.get("style")]
+        text = "\n".join(blocks + style_attrs)
+        # Strip comments so a comment that happens to contain a colour word
+        # (or anything else that looks like a declaration) can't trip the
+        # checks below -- only real declarations are inspected.
+        return CSS_COMMENT_RE.sub("", text)
 
     def _token_names(self):
         return set(re.findall(r"--([a-z0-9-]+)\s*:", self.tokens_css))
@@ -162,17 +223,29 @@ class TokensOnlyTests(unittest.TestCase):
         self.assertIn("s4", names)
 
     def test_page_style_has_no_literal_colour(self):
-        hex_colours = re.findall(r"#[0-9a-fA-F]{3,8}\b", self.style_block)
-        self.assertEqual(hex_colours, [], f"literal colour(s) outside tokens.css: {hex_colours}")
-        named = ("white", "black", "red", "green", "blue", "gray", "grey")
-        for name in named:
-            self.assertNotRegex(
-                self.style_block, rf"(?i)[:\s]{name}\b",
-                f"literal colour name used on the page: {name!r}",
-            )
+        offenders = []
+        for prop, value in self.declarations:
+            if not COLOUR_PROPERTY_RE.search(prop):
+                continue
+            # var(--token) references are allowed; strip them before
+            # looking for literal colours so e.g. var(--green) doesn't
+            # trip the bare "green" check.
+            cleaned = re.sub(r"var\([^)]*\)", "", value)
+            if re.search(r"#[0-9a-fA-F]{3,8}\b", cleaned):
+                offenders.append((prop, value))
+                continue
+            if re.search(r"(?i)\b(?:rgb|rgba|hsl|hsla)\(", cleaned):
+                offenders.append((prop, value))
+                continue
+            for name in NAMED_COLOURS:
+                if re.search(rf"(?i)\b{name}\b", cleaned):
+                    offenders.append((prop, value))
+                    break
+        self.assertEqual(offenders, [], f"literal colour(s) outside tokens.css: {offenders}")
 
     def test_page_style_sets_no_literal_font_family(self):
-        declarations = re.findall(r"font-family\s*:\s*([^;}]+)[;}]", self.style_block)
+        declarations = [value for prop, value in self.declarations
+                        if prop.strip().lower() == "font-family"]
         self.assertTrue(declarations, "expected at least one font-family declaration")
         for declaration in declarations:
             self.assertRegex(
@@ -181,7 +254,7 @@ class TokensOnlyTests(unittest.TestCase):
             )
 
     def test_every_var_the_page_uses_is_defined_in_tokens_css(self):
-        used = set(re.findall(r"var\(--([a-z0-9-]+)\)", self.style_block))
+        used = set(re.findall(r"var\(--([a-z0-9-]+)\)", self.style_text))
         defined = self._token_names()
         undefined = used - defined
         self.assertEqual(undefined, set(), f"uses var(...) not defined in tokens.css: {undefined}")
