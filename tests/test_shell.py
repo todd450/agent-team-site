@@ -227,10 +227,12 @@ class TokensOnlyTests(unittest.TestCase):
         for prop, value in self.declarations:
             if not COLOUR_PROPERTY_RE.search(prop):
                 continue
-            # var(--token) references are allowed; strip them before
-            # looking for literal colours so e.g. var(--green) doesn't
-            # trip the bare "green" check.
-            cleaned = re.sub(r"var\([^)]*\)", "", value)
+            # var(--token) references are allowed; strip the var(--name, part
+            # so e.g. var(--green) doesn't trip the bare "green" check below,
+            # but keep a fallback's literal in play -- var(--nope,#ff0000)
+            # must still be caught as a literal colour.
+            cleaned = re.sub(r"var\(--[a-z0-9-]+\s*,\s*", "", value, flags=re.IGNORECASE)
+            cleaned = re.sub(r"var\(--[a-z0-9-]+\)", "", cleaned, flags=re.IGNORECASE)
             if re.search(r"#[0-9a-fA-F]{3,8}\b", cleaned):
                 offenders.append((prop, value))
                 continue
@@ -254,10 +256,24 @@ class TokensOnlyTests(unittest.TestCase):
             )
 
     def test_every_var_the_page_uses_is_defined_in_tokens_css(self):
-        used = set(re.findall(r"var\(--([a-z0-9-]+)\)", self.style_text))
+        # Match the token name whether the call is var(--name) or has a
+        # fallback, var(--name, literal) -- a fallback's name must still
+        # exist in tokens.css, not just the call's syntax.
+        used = set(re.findall(r"var\(--([a-z0-9-]+)\s*[,)]", self.style_text))
         defined = self._token_names()
         undefined = used - defined
         self.assertEqual(undefined, set(), f"uses var(...) not defined in tokens.css: {undefined}")
+
+    def test_page_style_defines_no_custom_property(self):
+        # tokens.css is the one place custom properties may be defined. Any
+        # "--name:" declaration in the page's own <style> blocks or style=
+        # attributes -- even inside a :root block -- is a second token
+        # source that can silently out-cascade tokens.css.
+        custom_props = [prop for prop, _ in self.declarations if prop.strip().startswith("--")]
+        self.assertEqual(
+            custom_props, [],
+            f"page style defines its own custom propert(y/ies), a second token source: {custom_props}",
+        )
 
 
 if __name__ == "__main__":
