@@ -1,0 +1,38 @@
+/* Founding Agents — design tokens.
+
+   The one source for colour, type and spacing on this site. Every other file
+   that draws the page reads these names with var(...) and sets nothing of
+   its own outside them. Taken from mockup B (propose/issue-1,
+   mockups/issue-1/B.html), decided by the founder on issue #1. */
+
+:root {
+  /* colour */
+  --paper: #FBF9F4;
+  --paper-sunk: #F3EFE5;
+  --ink: #14130E;
+  --ink-muted: #5B5648;
+  --rule: #DCD6C6;
+  --rule-strong: #B9B19C;
+  --green: #1F5D3F;
+  --red: #A3161C;
+  --ochre: #7E5A08;
+
+  /* type */
+  --font-text: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* spacing */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+  --s9: 96px;
+
+  /* misc */
+  --radius: 2px;
+  --measure: 33em;
+}
