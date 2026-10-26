@@ -137,8 +137,18 @@ class PageParsesTests(unittest.TestCase):
         self.assertEqual(footer_count, 1)
         self.assertIn("GitHub Pages", self.html)
 
-    def test_placeholder_sections_for_later_issues_are_present_and_empty(self):
+    def test_all_seven_sections_are_present(self):
         section_classes = ["band", "costs", "flow", "limits", "measures", "record", "question"]
+        for name in section_classes:
+            match = re.search(
+                rf'<section class="{name}"[^>]*>(.*?)</section>', self.html, re.DOTALL)
+            self.assertIsNotNone(match, f"no section found for {name!r}")
+
+    def test_placeholder_sections_for_later_issues_are_still_empty(self):
+        # "band" and "costs" were filled in by issue #5 and are no longer
+        # placeholders; they have their own tests in test_status.py. The
+        # rest stay empty until issue #6 fills them.
+        section_classes = ["flow", "limits", "measures", "record", "question"]
         for name in section_classes:
             match = re.search(
                 rf'<section class="{name}"[^>]*>(.*?)</section>', self.html, re.DOTALL)

@@ -50,6 +50,67 @@
   section{padding:var(--s7) 0; border-top:1px solid var(--rule)}
   footer{padding:var(--s5) 0 0; border-top:1px solid var(--rule); font-size:14px; color:var(--ink-muted)}
 
+  /* --- status band (issue #5) ---------------------------------------- */
+  .band{border-top:2px solid var(--ink); border-bottom:2px solid var(--ink); padding:0}
+  .band-head{
+    display:flex;
+    flex-wrap:wrap;
+    gap:var(--s2) var(--s4);
+    align-items:baseline;
+    justify-content:space-between;
+    padding:var(--s4) 0;
+    border-bottom:1px solid var(--rule);
+  }
+  .verdict{
+    font-family:var(--font-mono);
+    font-size:13px;
+    letter-spacing:.02em;
+    font-weight:600;
+    display:flex;
+    align-items:flex-start;
+    gap:var(--s2);
+  }
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block; flex:0 0 auto}
+  .verdict .dot{margin-top:.45em}
+  .dot-green{background:var(--green)}
+  .dot-red{background:var(--red)}
+  .dot-open{background:transparent; border:2px solid var(--ochre)}
+  .stamp{font-family:var(--font-mono); font-size:11px; letter-spacing:.02em; color:var(--ink-muted)}
+
+  .steps{display:grid; gap:1px; background:var(--rule); margin:0; padding:0; list-style:none}
+  .step{background:var(--paper); padding:var(--s4) 0 var(--s5)}
+  .step-top{
+    display:flex;
+    align-items:center;
+    gap:var(--s2);
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-muted);
+    margin-bottom:var(--s2);
+  }
+  .step-name{display:block; font-size:16px; font-weight:600; letter-spacing:-.01em; margin-bottom:var(--s2)}
+  .step-state{font-family:var(--font-mono); font-size:12px; color:var(--green); font-weight:600}
+  .step-state.running{color:var(--ochre)}
+  .step-check{display:block; font-size:13px; line-height:1.5; color:var(--ink-muted); margin-top:var(--s2)}
+
+  /* --- the four costs (issue #5) --------------------------------------- */
+  .evidence{display:grid; gap:1px; background:var(--rule); border-top:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+  .ev{background:var(--paper); padding:var(--s5) 0}
+  .ev-figure{
+    font-family:var(--font-mono);
+    font-variant-numeric:tabular-nums;
+    font-size:34px;
+    line-height:1;
+    letter-spacing:-.03em;
+    display:block;
+    margin-bottom:var(--s2);
+  }
+  .ev-unit{font-size:13px; letter-spacing:0; color:var(--ink-muted); font-weight:400}
+  .ev-claim{margin:0 0 var(--s2); font-size:16px; line-height:1.5}
+  .ev-src{font-family:var(--font-mono); font-size:11px; color:var(--ink-muted); letter-spacing:.02em}
+
   @media (min-width:860px){
     body{font-size:18px}
     .shell{padding:0 var(--s7) var(--s9)}
@@ -57,6 +118,17 @@
     h1{font-size:46px}
     .lede{font-size:21px}
     section{padding:var(--s8) 0}
+
+    .band{display:grid; grid-template-columns:14em 1fr; align-items:start}
+    .band-head{grid-column:1; flex-direction:column; gap:var(--s5); border-bottom:0; padding:var(--s5) 0}
+    .steps{grid-column:2; grid-template-columns:repeat(4,1fr)}
+    .step{padding:var(--s5) var(--s4) var(--s5) 0}
+    .step:not(:first-child){padding-left:var(--s4)}
+
+    .evidence{grid-template-columns:1fr 1fr}
+    .ev{padding:var(--s5) var(--s5) var(--s5) 0}
+    .ev:nth-child(even){padding-left:var(--s5); padding-right:0}
+    .ev-figure{font-size:40px}
   }
 </style>
 </head>
@@ -74,12 +146,86 @@
 
   <section class="band" aria-label="Status">
     <h2>Status</h2>
-    <!-- Filled in issue #5: the status band. -->
+    <div class="band-head">
+      <span class="verdict"><span class="dot dot-green"></span>No open red issue. Nothing is blocked.</span>
+      <span class="stamp">Status as of 26 Oct 2026 · written by hand from
+      <a href="https://github.com/todd450/founding-agents-site/issues">this repo's issues</a> and
+      <a href="https://github.com/todd450/founding-agents-site/pulls?q=is%3Apr+is%3Amerged">merged
+      pull requests</a>, which anyone can read.</span>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <span class="step-top"><span class="dot dot-green"></span>Step 1</span>
+        <span class="step-name">main requires a pull request</span>
+        <span class="step-state">Done · 24 Oct 2026</span>
+        <span class="step-check">Admins included. A builder session's push was blocked.
+        Repository settings are not public, so this line carries a date and no link.</span>
+      </li>
+      <li class="step">
+        <span class="step-top"><span class="dot dot-green"></span>Step 2</span>
+        <span class="step-name">Ops watch checks the site nightly</span>
+        <span class="step-state">Done · 25 Oct 2026</span>
+        <span class="step-check">Installed by <span class="num">setup</span> in
+        <a href="https://github.com/todd450/founding-agents-site/pull/2">PR #2</a>; first run
+        green. A red run by hand opened
+        <a href="https://github.com/todd450/founding-agents-site/issues/3">#3</a> and closed it on
+        green.</span>
+      </li>
+      <li class="step">
+        <span class="step-top"><span class="dot dot-open"></span>Step 3</span>
+        <span class="step-name">build runs to merge on real issues</span>
+        <span class="step-state running">Running · 2 of 3–5 · 26 Oct 2026</span>
+        <span class="step-check">Two runs have merged on real issues:
+        <a href="https://github.com/todd450/founding-agents-site/issues/4">issue #4</a>, built in
+        <a href="https://github.com/todd450/founding-agents-site/pull/7">PR #7</a>, and
+        <a href="https://github.com/todd450/founding-agents-site/issues/5">issue #5</a>, built in
+        <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a> — this merge
+        itself. The rest of this site's three to five build issues, cut by hand from issue #1,
+        will add to the count.</span>
+      </li>
+      <li class="step">
+        <span class="step-top"><span class="dot dot-open"></span>Step 4</span>
+        <span class="step-name">propose reaches the founder as one item</span>
+        <span class="step-state running">Running · 1 of 2 · 26 Oct 2026</span>
+        <span class="step-check">Its first real run is
+        <a href="https://github.com/todd450/founding-agents-site/issues/1">issue #1</a>, this
+        brief. One more real run closes the step.</span>
+      </li>
+    </ol>
   </section>
 
   <section class="costs">
     <h2>The four costs</h2>
-    <!-- Filled in issue #5: the four costs. -->
+    <p class="col">Each one is real in one founder's history, counted in that founder's own
+    repositories. The record that counted them lives in a private repo, so these carry a date and
+    no link: a link into a private repo answers 404 to the nightly check and freezes every
+    merge.</p>
+    <div class="evidence">
+      <div class="ev">
+        <span class="ev-figure">5,410</span>
+        <p class="ev-claim"><strong>Volume nobody can read.</strong> Commits in under five
+        months — more change than one person can review, let alone remember.</p>
+        <span class="ev-src">Recorded 26 Oct 2026</span>
+      </div>
+      <div class="ev">
+        <span class="ev-figure">61,365 <span class="ev-unit">lines, in 8 days</span></span>
+        <p class="ev-claim"><strong>Work undone as fast as it was done.</strong> Thirty-two
+        removal commits deleting what had just been written.</p>
+        <span class="ev-src">Recorded 26 Oct 2026</span>
+      </div>
+      <div class="ev">
+        <span class="ev-figure">731</span>
+        <p class="ev-claim"><strong>Sweeping up after the fact.</strong> Bug-sweep and audit
+        commits: quality bolted on at the end instead of decided at the start.</p>
+        <span class="ev-src">Recorded 26 Oct 2026</span>
+      </div>
+      <div class="ev">
+        <span class="ev-figure">28 <span class="ev-unit">of 28 runs failed</span></span>
+        <p class="ev-claim"><strong>Nobody watching.</strong> A nightly off-site backup failed
+        every run it ever made, unnoticed, until someone looked.</p>
+        <span class="ev-src">Recorded 26 Oct 2026</span>
+      </div>
+    </div>
   </section>
 
   <section class="flow">
