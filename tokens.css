@@ -1,0 +1,11 @@
+:root{
+  --paper:#fbfaf7;
+  --ink:#1d1d1b;
+  --ink-muted:#5c5a55;
+  --rule:#dedbd3;
+  --green:#2f6b4f;
+  --font-text:Georgia, serif;
+  --font-mono:Menlo, monospace;
+  --s2:4px; --s3:8px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  --measure:35em;
+}

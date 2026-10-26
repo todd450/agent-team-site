@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Founding Agents — the team's test bed</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-text); font-size:17px; line-height:1.6}
+  .shell{max-width:62em; margin:0 auto; padding:0 var(--s5) var(--s7)}
+  .col{max-width:var(--measure)}
+  h2{font-family:var(--font-mono); font-size:13px; text-transform:uppercase; color:var(--ink-muted); border-bottom:1px solid var(--rule)}
+  section{padding:var(--s6) 0; border-top:1px solid var(--rule)}
+  .band{border-top:2px solid var(--ink); border-bottom:2px solid var(--ink)}
+  .band-head{display:flex; flex-wrap:wrap; gap:var(--s2) var(--s4); padding:var(--s4) 0; border-bottom:1px solid var(--rule)}
+  .steps{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr}
+  .step{padding:var(--s4) 0; border-bottom:1px solid var(--rule)}
+  .step-state{font-family:var(--font-mono); font-size:13px}
+  .step-state.done{color:var(--green)}
+  .rail{max-width:var(--measure)}
+  table{border-collapse:collapse}
+  td{padding:var(--s2) var(--s3); border-bottom:1px solid var(--rule)}
+  footer{padding:var(--s5) 0 0; border-top:1px solid var(--rule); font-size:14px; color:var(--ink-muted)}
+  @media (min-width:860px){
+    .band{display:grid; grid-template-columns:max-content 1fr; align-items:start}
+    .band-head{grid-column:1; flex-direction:column; border-bottom:0; padding:var(--s4) 0}
+    .steps{grid-column:2; grid-template-columns:repeat(4,1fr)}
+    .step{padding:var(--s4) var(--s4) var(--s4) 0; border-bottom:0}
+    .step:not(:first-child){padding-left:var(--s4)}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <h1>Founding Agents</h1>
+  <p class="col">A team of Claude Code agents that builds products with one founder. This site is the team's first product, and its test bed.</p>
+</header>
+
+<section class="band" aria-labelledby="status">
+  <div class="band-head">
+    <h2 id="status">Where the team is</h2>
+    <p class="verdict">No open red issue. Nothing is blocked.</p>
+    <p class="stamp">As of <time datetime="2026-10-26">26 Oct 2026</time></p>
+  </div>
+  <ol class="steps">
+    <li class="step"><h3>Step 1 · Guardrails</h3><span class="step-state done">Done · <time datetime="2026-10-24">24 Oct 2026</time></span></li>
+    <li class="step"><h3>Step 2 · Ops watch</h3><span class="step-state done">Done · <time datetime="2026-10-25">25 Oct 2026</time></span></li>
+    <li class="step"><h3>Step 3 · Build</h3><span class="step-state done">Done · 4 of 3–5 · <time datetime="2026-10-26">26 Oct 2026</time></span></li>
+    <li class="step"><h3>Step 4 · Decide</h3><span class="step-state done">Done · <time datetime="2026-10-26">26 Oct 2026</time></span></li>
+  </ol>
+</section>
+
+<section aria-labelledby="flow">
+  <h2 id="flow">How a change flows</h2>
+  <ul class="rail">
+    <li><a href="https://github.com/todd450/founding-agents-site/issues/1">The brief</a>: the product lead writes it and the founder decides.</li>
+    <li><a href="https://github.com/todd450/founding-agents-site/pull/7">A build</a>: a builder in its own worktree, then review, then the integrator merges.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="measures">
+  <h2 id="measures">How we'll know it works</h2>
+  <table class="measures">
+    <tr><td>Built before deciding</td><td>lines deleted within two weeks</td><td>fall</td></tr>
+    <tr><td>Found bugs late</td><td>bugs found after merge</td><td>mostly before</td></tr>
+  </table>
+</section>
+
+<section aria-labelledby="record">
+  <h2 id="record">The record</h2>
+  <ol class="record-list col">
+    <li><time datetime="2026-10-26">26 Oct</time> The status band merged after one send-back.</li>
+    <li><time datetime="2026-10-25">25 Oct</time> The page shell merged after three rounds of review.</li>
+  </ol>
+</section>
+
+<footer>
+  <p>Built in the open: <a href="https://github.com/todd450/founding-agents-site">the repo</a> · <a href="https://github.com/todd450/founding-agents-site/issues">its issues</a></p>
+</footer>
+</div>
+</body>
+</html>
