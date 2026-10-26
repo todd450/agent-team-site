@@ -292,6 +292,41 @@ class RecordSectionTests(unittest.TestCase):
         self.assertEqual(dates, sorted(dates, reverse=True),
                           "record entries are not in newest-first date order")
 
+    def _entries(self):
+        entries = re.findall(
+            r'<li\b[^>]*>\s*<span class="when">(.*?)</span>\s*<p>(.*?)</p>',
+            self.record, re.DOTALL)
+        self.assertEqual(len(entries), self._li_count(),
+                          "not every record entry parses as a when and a paragraph")
+        return [(strip_tags(when), strip_tags(body)) for when, body in entries]
+
+    def test_the_entry_for_issue_6_counts_four_review_rounds(self):
+        # Issue #10: the entry said three rounds. There were four -- three
+        # that sent PR #9 back, then a fourth, on the same PR, that approved
+        # it. Nothing else here reads the numbers in the record's prose, only
+        # its dates and its shape, which is how the wrong count merged.
+        matching = [(when, body) for when, body in self._entries() if "#6" in when]
+        self.assertEqual(len(matching), 1,
+                          f"expected exactly one record entry whose when names issue #6, got "
+                          f"{[when for when, _ in matching]!r}")
+        text = " ".join(matching[0]).lower()
+        counts = re.findall(
+            r"\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) rounds?\b", text)
+        self.assertTrue(counts, "the entry for issue #6 does not say how many rounds it took")
+        self.assertEqual(set(counts), {"four"},
+                          f"issue #6's review took four rounds, the entry says {counts!r}")
+
+    def test_only_the_newest_entry_is_marked_this_build(self):
+        # "this build" is the entry for the merge the reader is looking at.
+        # Once a later build adds its own entry the older one has to stop
+        # claiming the label, or the record carries two of them and one is
+        # false.
+        whens = [when.lower() for when, _ in self._entries()]
+        marked = [index for index, when in enumerate(whens) if "this build" in when]
+        self.assertEqual(marked, [0],
+                          f"expected only the newest entry to be marked 'this build', got "
+                          f"entries {marked!r} of {whens!r}")
+
     def test_record_includes_this_build(self):
         self.assertIn("this build", self.record.lower())
         self.assertIn("#6", self.record)

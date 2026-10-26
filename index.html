@@ -193,10 +193,25 @@
     section{padding:var(--s8) 0}
 
     .band{display:grid; grid-template-columns:14em 1fr; align-items:start}
-    .band-head{grid-column:1; flex-direction:column; gap:var(--s5); border-bottom:0; padding:var(--s5) 0}
+    /* The verdict line is the band's first column, so it gets the gutter and
+       the 1px rule the step columns divide each other with -- without them it
+       ends at the exact left edge of the STEP 1 column and the two run
+       together. align-self:stretch runs that rule the full height of the
+       steps beside it, like the dividers between them; justify-content goes
+       back to flex-start because the phone layout's space-between would
+       spread the verdict line and the stamp over that new height. */
+    .band-head{
+      grid-column:1;
+      flex-direction:column;
+      justify-content:flex-start;
+      gap:var(--s5);
+      border-bottom:0;
+      border-right:1px solid var(--rule);
+      padding:var(--s5) var(--s4) var(--s5) 0;
+      align-self:stretch;
+    }
     .steps{grid-column:2; grid-template-columns:repeat(4,1fr)}
-    .step{padding:var(--s5) var(--s4) var(--s5) 0}
-    .step:not(:first-child){padding-left:var(--s4)}
+    .step{padding:var(--s5) var(--s4)}
 
     .evidence{grid-template-columns:1fr 1fr}
     .ev{padding:var(--s5) var(--s5) var(--s5) 0}
@@ -251,24 +266,26 @@
       <li class="step">
         <span class="step-top"><span class="dot dot-green"></span>Step 3</span>
         <span class="step-name">build runs to merge on real issues</span>
-        <span class="step-state">Done · 3 of 3–5 · 26 Oct 2026</span>
-        <span class="step-check">Three runs have merged on real issues:
+        <span class="step-state">Done · 4 of 3–5 · 26 Oct 2026</span>
+        <span class="step-check">Four runs have merged on real issues:
         <a href="https://github.com/todd450/founding-agents-site/issues/4">issue #4</a>, built in
         <a href="https://github.com/todd450/founding-agents-site/pull/7">PR #7</a>;
         <a href="https://github.com/todd450/founding-agents-site/issues/5">issue #5</a>, built in
-        <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a>; and
+        <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a>;
         <a href="https://github.com/todd450/founding-agents-site/issues/6">issue #6</a>, built in
-        <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a> — this merge
-        itself. Three of the three to five build issues this step needed are now in, so the step
-        is done.</span>
+        <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>; and
+        <a href="https://github.com/todd450/founding-agents-site/issues/10">issue #10</a> — this
+        merge itself. Four of the three to five build issues this step needed are now in, so the
+        step is done.</span>
       </li>
       <li class="step">
-        <span class="step-top"><span class="dot dot-open"></span>Step 4</span>
+        <span class="step-top"><span class="dot dot-green"></span>Step 4</span>
         <span class="step-name">propose reaches the founder as one item</span>
-        <span class="step-state running">Running · 1 of 2 · 26 Oct 2026</span>
-        <span class="step-check">Its first real run is
-        <a href="https://github.com/todd450/founding-agents-site/issues/1">issue #1</a>, this
-        brief. One more real run closes the step.</span>
+        <span class="step-state">Done · 26 Oct 2026</span>
+        <span class="step-check">Its done condition was one real run on this site's brief, and
+        that run is the queue item on
+        <a href="https://github.com/todd450/founding-agents-site/issues/1">issue #1</a>, which
+        reached the founder on 26 Oct 2026.</span>
       </li>
     </ol>
   </section>
@@ -360,7 +377,7 @@
         <tr>
           <td><span class="num">build</span> ran to merge on real site issues</td>
           <td class="figure" data-label="Bar">3–5</td>
-          <td class="figure hit" data-label="26 Oct">3</td>
+          <td class="figure hit" data-label="26 Oct">4</td>
         </tr>
         <tr>
           <td><span class="num">propose</span> reached the founder as one queue item, one
@@ -394,13 +411,30 @@
     <ol class="record-list">
       <li>
         <span class="when">26 Oct 2026 · this build</span>
+        <p>Reading the live page after issue #6 merged found three claims on it that were not
+        true. Step 4 still read <span class="num">Running · 1 of 2</span>, though its done
+        condition — one real run of <span class="num">propose</span> on this site's brief — was
+        met by the queue item on
+        <a href="https://github.com/todd450/founding-agents-site/issues/1">issue #1</a>. At
+        1440px the band's verdict line ended at the exact left edge of the STEP 1 column, because
+        only the step columns carried the gutter and the rule that divide them. And the entry
+        below undercounted its own review at three rounds when it took four. The first two were
+        written in <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a> and
+        the third in <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>,
+        and all three passed review there: the step tests asked whether a step carried a name, a
+        state, a date and a link, never whether the state was still true, and nothing read the
+        band's CSS at a width or the numbers in the record's own prose. Fixed for
+        <a href="https://github.com/todd450/founding-agents-site/issues/10">issue #10</a>.</p>
+      </li>
+      <li>
+        <span class="when">26 Oct 2026 · issue #6's review took four rounds</span>
         <p>Issue #6 filled in the last four sections: how a change flows, what this is not, the
         measures table and this record. It drops the mockup's open question about the product's
         name — the rename below settled that before this issue was built — and records the
         rename here instead. Built in
         <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>, which is also
         the third real site issue through <span class="num">build</span> to merge, closing build
-        step 3 at 3 of 3–5. Its own review took three rounds. The first found the same shape of
+        step 3 at 3 of 3–5. Its own review took four rounds. The first found the same shape of
         gap as issue #5's, one issue later — the record's date-order test reported on the entries
         it could parse rather than on all of them — two of this build's new prose blocks running
         the full shell width while the paragraph directly above each stayed capped, and nothing
@@ -411,7 +445,7 @@
         all. The second round found both again, and the third round found that same literal-tag
         blind spot in two more tests — the flow rail's role labels and the measures table's rows —
         and this paragraph undercounting its own prose blocks and its own rounds. All were fixed
-        before merge.</p>
+        on the same PR, and a fourth round approved it.</p>
       </li>
       <li>
         <span class="when">26 Oct 2026 · issue #5's review caught its own blind spot</span>
