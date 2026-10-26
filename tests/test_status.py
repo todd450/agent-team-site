@@ -9,6 +9,14 @@
   every other check here is a plain, offline read of the page.
 - The four costs: four figures with the values from the mockup (issue #1,
   option B), each with its own date and no link.
+
+Known gap in the live red-issue check: it skips on *any* `OSError` (not just
+no network), and nothing in `.github/workflows` runs this suite, so on a
+rate-limited or fully offline runner it silently never runs. When it does
+run live, an open `red` issue turns this whole suite red -- including on
+the very PR that fixes that issue -- since the check has no way to tell
+"the band is wrong" from "ops watch is already on it". Left as-is here;
+worth fixing if that happens in practice.
 """
 
 import json
@@ -28,6 +36,15 @@ REPO_PREFIX = f"https://github.com/{REPO}/"
 DATE_RE = re.compile(r"\b\d{1,2} [A-Z][a-z]{2} \d{4}\b")
 
 EXPECTED_FIGURES = ["5,410", "61,365", "731", "28"]
+
+# One name per build step, in order -- used to check that all four steps are
+# actually present (not, say, the same step repeated four times).
+EXPECTED_STEP_NAMES = [
+    "main requires a pull request",
+    "Ops watch checks the site nightly",
+    "build runs to merge on real issues",
+    "propose reaches the founder as one item",
+]
 
 
 def read(path):
@@ -54,10 +71,13 @@ class StatusBandTests(unittest.TestCase):
     def test_every_step_has_a_name_a_dated_state_and_a_check(self):
         steps = re.findall(r'<li class="step">(.*?)</li>\s*', self.band, re.DOTALL)
         self.assertEqual(len(steps), 4, "expected exactly 4 build steps")
+        names = []
         for step in steps:
             name_match = re.search(r'<span class="step-name">([^<]+)</span>', step)
             self.assertIsNotNone(name_match, "step has no step-name")
-            self.assertTrue(name_match.group(1).strip(), "step-name is empty")
+            name = name_match.group(1).strip()
+            self.assertTrue(name, "step-name is empty")
+            names.append(name)
 
             state_match = re.search(r'<span class="step-state[^"]*">([^<]+)</span>', step)
             self.assertIsNotNone(state_match, "step has no step-state")
@@ -67,6 +87,11 @@ class StatusBandTests(unittest.TestCase):
             self.assertIsNotNone(check_match, "step has no step-check")
             self.assertTrue(re.sub(r"<[^>]+>", "", check_match.group(1)).strip(),
                              "step-check has no text")
+
+        self.assertEqual(len(set(names)), 4,
+                          f"expected 4 distinct step names, got {names!r}")
+        self.assertEqual(names, EXPECTED_STEP_NAMES,
+                          "step names do not match the 4 build steps issue #5 names")
 
     def test_every_link_in_the_band_stays_in_this_repo(self):
         links = re.findall(r'href="([^"]+)"', self.band)
@@ -91,7 +116,24 @@ class StatusBandTests(unittest.TestCase):
         if open_red_issues:
             self.assertEqual(dot_colour, "red",
                               "a red issue is open live, but the band's dot says otherwise")
-            self.assertIn("blocked", verdict_text.lower())
+            lowered = verdict_text.lower()
+            # The substring "blocked" alone proves nothing -- "Nothing is
+            # blocked." contains it too. A red issue open live must make the
+            # verdict say something is blocked, and must not leave the old
+            # all-clear claim standing.
+            self.assertNotIn(
+                "nothing is blocked", lowered,
+                "a red issue is open live, but the verdict still claims nothing is blocked",
+            )
+            self.assertIn(
+                "blocked", lowered,
+                "a red issue is open live, but the verdict does not say anything is blocked",
+            )
+            issue_numbers = {str(issue["number"]) for issue in open_red_issues}
+            self.assertTrue(
+                any(number in self.band for number in issue_numbers),
+                "a red issue is open live, but the band does not name it",
+            )
         else:
             self.assertEqual(dot_colour, "green",
                               "no red issue is open live, but the band's dot says otherwise")
