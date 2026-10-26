@@ -205,7 +205,7 @@
 
     .rail li{padding:var(--s3) var(--s4) var(--s3) 0}
 
-    .limits-box, .record-list li{max-width:var(--measure)}
+    .limits-box, .record-list li, .rail, .flow .note{max-width:var(--measure)}
   }
 </style>
 </head>
@@ -400,7 +400,10 @@
         rename here instead. Built in
         <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>, which is also
         the third real site issue through <span class="num">build</span> to merge, closing build
-        step 3 at 3 of 3–5.</p>
+        step 3 at 3 of 3–5. Its own review found the same shape of gap as issue #5's, one issue
+        later: the record's date-order test reported on the entries it could parse rather than on
+        all of them, and two of this build's new prose blocks ran the full shell width while the
+        paragraph directly above each stayed capped. Both were fixed before merge.</p>
       </li>
       <li>
         <span class="when">26 Oct 2026 · issue #5's review caught its own blind spot</span>

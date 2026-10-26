@@ -154,6 +154,17 @@ class ResponsiveMeasureTests(unittest.TestCase):
             ".record-list has no max-width:var(--measure), so its entries run the full shell "
             "width while the record's own intro paragraph is capped")
 
+    def test_rail_is_capped_to_the_measure(self):
+        self.assertTrue(
+            self._is_capped_to_the_measure(".rail"),
+            ".rail has no max-width:var(--measure), so the flow list runs the full shell width")
+
+    def test_flow_note_is_capped_to_the_measure(self):
+        self.assertTrue(
+            self._is_capped_to_the_measure(".flow .note"),
+            ".flow .note has no max-width:var(--measure), so it runs the full shell width while "
+            "the paragraph above the rail is capped")
+
 
 class MeasuresSectionTests(unittest.TestCase):
     def setUp(self):
@@ -195,7 +206,7 @@ class RecordSectionTests(unittest.TestCase):
         return datetime.strptime(f"{day} {month} {year}", "%d %b %Y")
 
     def _li_count(self):
-        return len(re.findall(r"<li>", self.record))
+        return len(re.findall(r"<li\b", self.record))
 
     def test_every_entry_has_a_dated_when_and_some_text(self):
         li_count = self._li_count()
