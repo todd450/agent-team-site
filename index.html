@@ -400,10 +400,18 @@
         rename here instead. Built in
         <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>, which is also
         the third real site issue through <span class="num">build</span> to merge, closing build
-        step 3 at 3 of 3–5. Its own review found the same shape of gap as issue #5's, one issue
-        later: the record's date-order test reported on the entries it could parse rather than on
-        all of them, and two of this build's new prose blocks ran the full shell width while the
-        paragraph directly above each stayed capped. Both were fixed before merge.</p>
+        step 3 at 3 of 3–5. Its own review took three rounds. The first found the same shape of
+        gap as issue #5's, one issue later — the record's date-order test reported on the entries
+        it could parse rather than on all of them — two of this build's new prose blocks running
+        the full shell width while the paragraph directly above each stayed capped, and nothing
+        checking that the two files the flow section links to are still there to be served, which
+        is the 404 that freezes every merge. The first two fixes were themselves incomplete: the
+        date-order count matched a literal <span class="num">&lt;li&gt;</span>, so an entry
+        carrying a class stayed invisible, and two more prose blocks were left uncapped, four in
+        all. The second round found both again, and the third round found that same literal-tag
+        blind spot in two more tests — the flow rail's role labels and the measures table's rows —
+        and this paragraph undercounting its own prose blocks and its own rounds. All were fixed
+        before merge.</p>
       </li>
       <li>
         <span class="when">26 Oct 2026 · issue #5's review caught its own blind spot</span>
