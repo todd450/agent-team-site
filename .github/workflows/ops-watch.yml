@@ -1,0 +1,23 @@
+# Ops watch: every night, check that the GitHub Pages deploy is green and every link on the site
+# resolves. A failure opens one `red` issue; the next green run closes it. Installed by the
+# Founding Agents `setup` skill, which also copies .github/ops-watch/check_site.py.
+name: ops-watch
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+  pages: read
+  deployments: read
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/ops-watch
+      - run: python3 .github/ops-watch/check_site.py
+        env:
+          GH_TOKEN: ${{ github.token }}
