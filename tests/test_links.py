@@ -1,11 +1,12 @@
-"""Tests for the two rules about a link on this site: where it may point, and
-how a fact's text is read to find it.
+"""Tests for the three rules about a fact's text: where a link may point, how
+the text is read to find its links, and what it quotes as code rather than
+putting on the page as markup.
 
-Both are written twice, because the two places that need them cannot share
-code: `scripts/pull-facts.js` is the gate on what enters the facts snapshot,
-and `tests/links.py` is what the suite checks index.html and the snapshot
-with. So the cases live here once and both copies answer all of them, and a
-hole opened in one is a failure here rather than a link on the page.
+All three are written twice, because the two places that need them cannot
+share code: `scripts/pull-facts.js` is the gate on what enters the facts
+snapshot, and `tests/links.py` is what the suite checks index.html and the
+snapshot with. So the cases live here once and both copies answer all of them,
+and a hole opened in one is a failure here rather than a link on the page.
 
 What the cases pin:
 
@@ -16,6 +17,9 @@ What the cases pin:
 - A reader that cannot read a link whole says so instead of finding nothing.
   A renderer reads more as a link than the reader's pattern does, and every
   such link is one whose destination no allowlist would ever see.
+- A code span is a pair of single backticks on one line, and backticks a
+  renderer would pair some other way are reported rather than read, because a
+  tag a reader thinks is quoted is an element on the page.
 """
 
 import json
@@ -24,7 +28,8 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from links import PAGES_PREFIX, REPO_PREFIX, allowed_link, link_targets
+from links import (PAGES_PREFIX, REPO_PREFIX, allowed_link, link_targets,
+                   markup_outside_backticks)
 
 CHECK_LINKS_JS = Path(__file__).resolve().parent / "check_links.js"
 
@@ -144,6 +149,34 @@ UNREADABLE = [
 ]
 
 
+# A fact's text, and the brackets it would put on the page as markup. A code
+# span is a pair of single backticks on one line; a run of two or more, a
+# backslash-escaped backtick and backticks on either side of a line break are
+# each paired some other way by a renderer, so the reader reports a backtick
+# rather than vouching for what sits between them.
+# (text, the brackets that reach the page)
+MARKUP = [
+    ("Nothing here is markup at all.", []),
+    ("A literal `<li>` in backticks is quoted code.", []),
+    ("Two literals, `<li>` and `<ul>`, in one line.", []),
+    ("An <img src=x> outside backticks is markup.", ["<", ">"]),
+    ("An unclosed `backtick leaves what is quoted unclear.", ["`"]),
+    # A renderer closes a run of N backticks only with the next run of exactly
+    # N, honours a backslash escape, and ends a span where the paragraph ends
+    # -- which a list item, a heading or a thematic break does as surely as a
+    # blank line, and which depends on the blocks around the text rather than
+    # on the text itself.
+    ("The flag ```<img src=x onerror=alert(1)>` is set.", ["`"]),
+    (r"Literal backtick \`<img src=x onerror=alert(1)>\` here.", ["`"]),
+    (r"A \`b` and `<img src=x>` c.", ["`"]),
+    ("`x\n- <img src=a>\n`", ["`"]),
+    ("`x\n# <img src=a>\n`", ["`"]),
+    ("`x\n***\n<img src=a> `", ["`"]),
+    ("`x\n\n<img src=x onerror=alert(1)>`", ["`"]),
+    ("A span the paragraph's own wrap broke: `<li>\nand more`.", ["`"]),
+]
+
+
 class LinkRuleTests(unittest.TestCase):
     """tests/links.py, the copy the suite checks the page and the snapshot
     with."""
@@ -175,6 +208,16 @@ class LinkReaderTests(unittest.TestCase):
                 self.assertTrue(unreadable, f"a renderer makes {renders_as} of this")
 
 
+class MarkupReaderTests(unittest.TestCase):
+    """tests/links.py once more: what a fact's text quotes as code, and what
+    it would put on the page as markup."""
+
+    def test_only_a_bracket_a_renderer_would_emit_is_reported(self):
+        for text, brackets in MARKUP:
+            with self.subTest(text=text):
+                self.assertEqual(markup_outside_backticks(text), brackets)
+
+
 class PullerAgreesTests(unittest.TestCase):
     """scripts/pull-facts.js, the copies that decide what may enter the
     snapshot. They must answer every case the same way."""
@@ -183,11 +226,12 @@ class PullerAgreesTests(unittest.TestCase):
     def setUpClass(cls):
         cls.node = shutil.which("node")
 
-    def ask_the_puller(self, links=(), texts=()):
+    def ask_the_puller(self, links=(), texts=(), markup=()):
         self.assertIsNotNone(self.node, "node is needed to run the puller's copy of the rule")
         result = subprocess.run(
             [self.node, str(CHECK_LINKS_JS)],
-            input=json.dumps({"links": list(links), "texts": list(texts)}),
+            input=json.dumps({"links": list(links), "texts": list(texts),
+                              "markup": list(markup)}),
             capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
@@ -211,6 +255,15 @@ class PullerAgreesTests(unittest.TestCase):
                 self.assertEqual([answer["targets"], answer["unreadable"]],
                                  [targets, unreadable],
                                  "the puller's link reader and tests/links.py disagree")
+
+    def test_the_puller_reads_a_text_s_markup_the_same_way(self):
+        texts = [text for text, _ in MARKUP]
+        answers = self.ask_the_puller(markup=texts)["markup"]
+        self.assertEqual(len(answers), len(texts))
+        for text, answer in zip(texts, answers):
+            with self.subTest(text=text):
+                self.assertEqual(answer, markup_outside_backticks(text),
+                                 "the puller's code-span reader and tests/links.py disagree")
 
 
 if __name__ == "__main__":

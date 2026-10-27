@@ -1,5 +1,7 @@
-"""The one rule for where a link on this site may point, in Python, and the
-one reader that finds the links in a fact's text.
+"""The rules for a fact's text, in Python: where a link on this site may
+point, the one reader that finds the links in a fact's text, and the one
+reader that tells what a fact quotes as code from what would reach the page
+as markup.
 
 This page's links -- the ones written into index.html and the ones a fact
 carries in content/facts.json -- may go to this repository or to its Pages
@@ -7,8 +9,8 @@ site, and nowhere else. A link anywhere else is one the nightly check cannot
 vouch for, and a link into the private plugin repo answers 404, opens `red`
 and freezes every merge.
 
-scripts/pull-facts.js holds the same rule and the same reader, because it is
-the gate on what enters the snapshot; tests/test_links.py runs both copies
+scripts/pull-facts.js holds the same rules and the same readers, because it
+is the gate on what enters the snapshot; tests/test_links.py runs both copies
 over the same cases so they cannot drift apart.
 """
 
@@ -65,6 +67,43 @@ PAREN_RE = re.compile(r"[()]")
 # finds nothing at all where a renderer finds a link.
 REFERENCE_LINK_RE = re.compile(r"\]\[")
 LINK_DEFINITION_RE = re.compile(r"^ {0,3}\[[^\]]*\]:", re.MULTILINE)
+
+# What two backticks quote as code: a short literal, between single
+# backticks, on one line.
+#
+# A renderer is stricter than it looks here. It closes a run of N backticks
+# only with the next run of exactly N, it reads a backslash-escaped backtick
+# as a literal character rather than a delimiter, and it ends a span where the
+# paragraph ends -- which a list item, a heading or a thematic break does as
+# surely as a blank line, and which depends on the blocks around the text
+# rather than on the text itself. Each of those is a pairing a reader that
+# takes "the next backtick" as the closer gets wrong, and getting it wrong
+# puts a live tag where this reader saw quoted code.
+#
+# So rather than parse a paragraph, the one form a fact may quote in is a pair
+# of single backticks on one line: a run of two or more, a backslash, and a
+# line whose backticks do not pair are each quoting this reader will not
+# vouch for.
+CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+BACKTICK_RUN_RE = re.compile(r"``")
+BACKSLASH_RE = re.compile(r"\\")
+
+
+def markup_outside_backticks(value):
+    """The brackets this text would put on the page as markup. A fact is text:
+    a link is [text](url) and a literal value is `code`, and the generator
+    renders those two and escapes everything else, so a < or > inside
+    backticks is safe and one anywhere else is not.
+
+    A backtick this reader cannot pair the way a renderer would is reported as
+    a backtick, because then what is quoted is nobody's guess: a run of two or
+    more, a backslash, and a line whose backticks do not pair.
+    """
+    if (BACKTICK_RUN_RE.search(value) or BACKSLASH_RE.search(value)
+            or any(line.count("`") % 2 != 0 for line in value.split("\n"))):
+        return ["`"]
+    outside = CODE_SPAN_RE.sub("", value)
+    return [bracket for bracket in ("<", ">") if bracket in outside]
 
 
 def link_targets(text):

@@ -46,6 +46,9 @@ suite never touches the network.
 | `bare-email-address.json` | a bare email address, which a renderer autolinks as `mailto:` |
 | `reference-style-link.json` | a link written as a reference and defined further down, so the reader finds no target to check at all |
 | `backticks-across-a-blank-line.json` | a tag between two backticks a blank line apart, which no renderer pairs, so what looks quoted is markup |
+| `backticks-across-a-list-item.json` | the same tag with a list item between the backticks: a blank line is not the only thing that ends a paragraph |
+| `backticks-in-a-run.json` | a tag after a run of three backticks, which a renderer closes only with another run of three |
+| `escaped-backtick.json` | a tag between two backslash-escaped backticks, which are literal characters and not delimiters at all |
 
 A scenario file:
 

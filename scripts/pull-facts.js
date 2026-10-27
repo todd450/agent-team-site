@@ -70,11 +70,25 @@ const ESCAPE = /%[0-9A-Fa-f]{2}/g;
 const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-// What two backticks quote as code: everything between them inside one
-// paragraph. A line break within the paragraph keeps the span, and a blank
-// line ends it -- a renderer pairs neither backtick across a paragraph
-// break, so a tag sitting between them is an element on the page, not code.
-const CODE_SPAN = /`[^`\n]*(?:\n(?!\s*\n)[^`\n]*)*`/g;
+// What two backticks quote as code: a short literal, between single
+// backticks, on one line.
+//
+// A renderer is stricter than it looks here. It closes a run of N backticks
+// only with the next run of exactly N, it reads a backslash-escaped backtick
+// as a literal character rather than a delimiter, and it ends a span where
+// the paragraph ends -- which a list item, a heading or a thematic break does
+// as surely as a blank line, and which depends on the blocks around the text
+// rather than on the text itself. Each of those is a pairing a reader that
+// takes "the next backtick" as the closer gets wrong, and getting it wrong
+// puts a live tag where this reader saw quoted code.
+//
+// So rather than parse a paragraph, the one form a fact may quote in is a
+// pair of single backticks on one line: a run of two or more, a backslash,
+// and a line whose backticks do not pair are each quoting this reader will
+// not vouch for.
+const CODE_SPAN = /`[^`\n]*`/g;
+const BACKTICK_RUN = /``/;
+const BACKSLASH = /\\/;
 // What a [text](url) link points at, whatever its scheme.
 const LINK_TARGET = /\[[^\]]*\]\(([^)]*)\)/g;
 // A bare address, or anything else a renderer turns into a link on its own.
@@ -188,20 +202,33 @@ function isRealDate(value) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
 }
 
+// The brackets this text would put on the page as markup -- or a backtick,
+// reported instead when this reader cannot pair the text's backticks the way
+// a renderer would, because then what is quoted as code is nobody's guess.
+// The same reader as tests/links.py; tests/check_links.js runs both copies
+// over the same texts.
+function markupOutsideBackticks(value) {
+  if (BACKTICK_RUN.test(value) || BACKSLASH.test(value)
+    || value.split('\n').some((line) => (line.match(/`/g) || []).length % 2 !== 0)) {
+    return ['`'];
+  }
+  const outside = value.replace(CODE_SPAN, '');
+  return ['<', '>'].filter((bracket) => outside.includes(bracket));
+}
+
 // Text columns hold text, never HTML. A link is [text](url) and a literal
 // value is `code`; the generator renders those two and escapes the rest. So a
 // < or > anywhere but inside backticks would reach the page as markup nobody
 // reviewed, and is a read this script refuses.
 function checkText(where, value) {
   if (typeof value !== 'string') fail(`${where} is not text: ${JSON.stringify(value)}`);
-  if ((value.match(/`/g) || []).length % 2 !== 0) {
-    fail(`${where} has an unclosed backtick, so what is quoted as code is unclear`);
+  const brackets = markupOutsideBackticks(value);
+  if (brackets.includes('`')) {
+    fail(`${where} quotes code in a form this snapshot does not read: a fact quotes a short `
+      + 'literal between single backticks on one line, so what this one quotes is unclear');
   }
-  const outside = value.replace(CODE_SPAN, '');
-  for (const bracket of ['<', '>']) {
-    if (outside.includes(bracket)) {
-      fail(`${where} carries ${bracket} outside backticks, which would put markup on the page`);
-    }
+  for (const bracket of brackets) {
+    fail(`${where} carries ${bracket} outside backticks, which would put markup on the page`);
   }
   const { targets, unreadable } = linkTargets(value);
   if (unreadable) {
@@ -387,5 +414,12 @@ if (require.main === module) {
 }
 
 module.exports = {
-  pull, isAllowedLink, linkTargets, KINDS, SNAPSHOT_PATH, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
+  pull,
+  isAllowedLink,
+  linkTargets,
+  markupOutsideBackticks,
+  KINDS,
+  SNAPSHOT_PATH,
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
 };

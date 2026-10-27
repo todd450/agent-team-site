@@ -27,11 +27,11 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-# The one Python copy of "where a link may point" and of the reader that
-# finds the links in a fact's text, shared with the page's own link tests in
-# tests/test_shell.py and checked against the puller's copies in
-# tests/test_links.py.
-from links import allowed_link, link_targets
+# The one Python copy of the rules for a fact's text -- where a link may
+# point, how its links are found, and what it quotes as code -- shared with
+# the page's own link tests in tests/test_shell.py and checked against the
+# puller's copies in tests/test_links.py.
+from links import allowed_link, link_targets, markup_outside_backticks
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
@@ -60,24 +60,8 @@ KINDS = {
 }
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-# What two backticks quote as code: everything between them inside one
-# paragraph. A line break within the paragraph keeps the span, and a blank
-# line ends it -- a renderer pairs neither backtick across a paragraph break,
-# so a tag sitting between them is an element on the page, not code.
-CODE_SPAN_RE = re.compile(r"`[^`\n]*(?:\n(?!\s*\n)[^`\n]*)*`")
 STANDINGS = {"hit", "pending", "miss", ""}
 ADD_COLUMN_RE = re.compile(r"alter table (\w+) add column (\w+)")
-
-
-def markup_outside_backticks(value):
-    """The brackets this text would put on the page as markup. A fact is text:
-    a link is [text](url) and a literal value is `code`, and the generator
-    renders those two and escapes everything else, so a < or > inside
-    backticks is safe and one anywhere else is not."""
-    if value.count("`") % 2 != 0:
-        return ["`"]  # an unclosed backtick leaves what is quoted unclear
-    outside = CODE_SPAN_RE.sub("", value)
-    return [bracket for bracket in ("<", ">") if bracket in outside]
 
 
 def unchecked_links(value):
@@ -194,31 +178,6 @@ class SnapshotRulesMixin:
                             unchecked_links(row[column]), [],
                             f"{kind}.{column} carries a link nothing can vouch for: "
                             f"{row[column]!r}")
-
-
-# A fact's text, and the brackets it would put on the page as markup. A code
-# span is what two backticks enclose inside one paragraph: a line break within
-# the paragraph keeps it, and a blank line ends it, so a renderer pairs
-# neither backtick across one and the tag between them is a real element.
-# (text, the brackets that reach the page)
-MARKUP = [
-    ("Nothing here is markup at all.", []),
-    ("A literal `<li>` in backticks is quoted code.", []),
-    ("A span the paragraph's own wrap broke: `<li>\nand more`.", []),
-    ("An <img src=x> outside backticks is markup.", ["<", ">"]),
-    ("`x\n\n<img src=x onerror=alert(1)>`", ["<", ">"]),
-    ("An unclosed `backtick leaves what is quoted unclear.", ["`"]),
-]
-
-
-class MarkupReaderTests(unittest.TestCase):
-    """What counts as quoted code in a fact's text, and what reaches the page
-    as markup."""
-
-    def test_only_a_bracket_a_renderer_would_emit_is_reported(self):
-        for text, brackets in MARKUP:
-            with self.subTest(text=text):
-                self.assertEqual(markup_outside_backticks(text), brackets)
 
 
 class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):

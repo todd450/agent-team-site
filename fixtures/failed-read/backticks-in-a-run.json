@@ -1,0 +1,18 @@
+{
+  "name": "a tag between backticks a renderer never pairs",
+  "why": "A renderer closes a run of N backticks only with the next run of exactly N, so the run of three here opens nothing and the tag is a live element on the page. A reader that pairs each backtick with the next one reads two spans, finds nothing outside them, and the backtick count is even, so neither rule fires.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "The flag ```<img src=x onerror=alert(1)>` is set."
+        }
+      ]
+    }
+  }
+}
