@@ -37,7 +37,13 @@ const READ_TIMEOUT_MS = 15000;
 // fact is true as of), then its own typed columns.
 const KINDS = [
   { table: 'status_steps', columns: ['position', 'as_of', 'name', 'state', 'detail'] },
-  { table: 'costs', columns: ['position', 'as_of', 'figure', 'lead', 'claim', 'source'] },
+  // A cost's figure is the number alone and its unit the small tail beside
+  // it, as the page shows them: "61,365" and "lines, in 8 days".
+  {
+    table: 'costs',
+    columns: ['position', 'as_of', 'figure', 'unit', 'lead', 'claim', 'source'],
+    optional: ['unit'],
+  },
   {
     table: 'measures',
     columns: ['position', 'as_of', 'label', 'bar', 'current', 'standing'],
@@ -53,6 +59,12 @@ const ALLOWED_LINK_PREFIXES = [
   'https://todd450.github.io/founding-agents-site',
 ];
 
+// The same rule as tests/links.py, which checks the snapshot and the page;
+// tests/test_links.py runs both copies over the same cases.
+const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]*$/;
+const ESCAPE = /%[0-9A-Fa-f]{2}/g;
+const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CODE_SPAN = /`[^`]*`/g;
 const URL_IN_TEXT = /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s)\]]+|(?<![\w/])\/\/[^\s)\]]+/g;
@@ -66,15 +78,39 @@ function fail(message) {
   throw new PullError(message);
 }
 
+// Where a link goes, not what it starts with. An address beginning with this
+// repo's own and carrying a ".." segment resolves somewhere else entirely:
+// https://github.com/todd450/founding-agents-site/../../attacker/evil is
+// https://github.com/attacker/evil to every browser.
 function isAllowedLink(link) {
-  // A prefix match counts only if what follows it is a path, query or
-  // fragment separator, or nothing at all: a lookalike host or repository
-  // whose name merely starts with this one's is not this one.
-  return ALLOWED_LINK_PREFIXES.some((prefix) => {
-    if (!link.startsWith(prefix)) return false;
+  if (typeof link !== 'string') return false;
+  for (const prefix of ALLOWED_LINK_PREFIXES) {
+    if (!link.startsWith(prefix)) continue;
     const rest = link.slice(prefix.length);
-    return rest === '' || '/?#'.includes(rest[0]);
-  });
+    // A prefix match counts only if what follows it is a path, query or
+    // fragment separator, or nothing at all: a lookalike host or repository
+    // whose name merely starts with this one's is not this one.
+    if (rest !== '' && !'/?#'.includes(rest[0])) continue;
+    // Only the plain URL characters: no backslash, space, tab or newline,
+    // each of which a browser rewrites or strips before it resolves the
+    // address. A percent escape may stand for ordinary text (?q=is%3Apr) but
+    // not for a character that decides where the address goes -- "%2e%2e"
+    // resolves as "..".
+    if (!PLAIN_URL_CHARS.test(rest)) return false;
+    if (SEPARATOR_ESCAPE.test(rest) || rest.replace(ESCAPE, '').includes('%')) return false;
+    if (rest.split('/').some((segment) => segment === '.' || segment === '..')) return false;
+    // The browser's own parser has the last word on where the link lands.
+    let resolved;
+    try {
+      resolved = new URL(link);
+    } catch {
+      return false;
+    }
+    if (resolved.protocol !== 'https:') return false;
+    const landing = resolved.origin + resolved.pathname;
+    return landing === prefix || (landing.startsWith(prefix) && landing[prefix.length] === '/');
+  }
+  return false;
 }
 
 function isRealDate(value) {
@@ -219,6 +255,10 @@ function today() {
  * Reads all four tables, then writes the snapshot. Nothing is written until
  * every read is in and sound, so a failure leaves the file as it was.
  *
+ * options.today is the day the pull happens on, so a test can run the same
+ * read weeks apart and see whether the snapshot's stamp moved; left out, it
+ * is today.
+ *
  * @returns {{path: string, changed: boolean}}
  */
 async function pull(options = {}) {
@@ -272,4 +312,6 @@ if (require.main === module) {
     });
 }
 
-module.exports = { pull, KINDS, SNAPSHOT_PATH, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY };
+module.exports = {
+  pull, isAllowedLink, KINDS, SNAPSHOT_PATH, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
+};

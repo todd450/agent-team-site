@@ -1,0 +1,18 @@
+{
+  "name": "a link that walks out on backslashes",
+  "why": "A browser folds a backslash into a slash before it resolves the path, so this lands on https://github.com/attacker/evil too. Refusing the literal '..' alone would let this one through.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "the rule that would have frozen every merge",
+          "entry": "Replaced before it reached [the brief](https://github.com/todd450/founding-agents-site/..\\..\\attacker/evil)."
+        }
+      ]
+    }
+  }
+}

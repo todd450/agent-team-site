@@ -1,0 +1,19 @@
+{
+  "name": "a link that walks out of this repo",
+  "why": "The address starts with this repo's own, so a plain prefix match says yes, but a browser resolves the '..' segments and opens https://github.com/attacker/evil-repo. What counts is where the link lands, not what it starts with.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "status_steps": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-24",
+          "name": "main requires a pull request",
+          "state": "Done",
+          "detail": "See [the writeup](https://github.com/todd450/founding-agents-site/../../attacker/evil-repo)."
+        }
+      ]
+    }
+  }
+}

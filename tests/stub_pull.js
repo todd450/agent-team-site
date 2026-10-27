@@ -3,7 +3,10 @@
 // Runs scripts/pull-facts.js over one scenario in fixtures/failed-read,
 // instead of over Supabase.
 //
-//   node tests/stub_pull.js <scenario.json> <out.json>
+//   node tests/stub_pull.js <scenario.json> <out.json> [YYYY-MM-DD]
+//
+// The last argument is the day the pull happens on, so a test can run the
+// same read weeks apart and see whether the snapshot's stamp moved.
 //
 // The puller is handed a stubbed fetch built from the scenario, and the real
 // fetch is replaced with one that throws, so the suite makes no network call
@@ -76,9 +79,9 @@ function stubFetch(scenario, rows) {
 }
 
 async function main() {
-  const [scenarioPath, out] = process.argv.slice(2);
+  const [scenarioPath, out, today] = process.argv.slice(2);
   if (!scenarioPath || !out) {
-    throw new Error('usage: node tests/stub_pull.js <scenario.json> <out.json>');
+    throw new Error('usage: node tests/stub_pull.js <scenario.json> <out.json> [YYYY-MM-DD]');
   }
   const scenario = load(scenarioPath);
   const rows = load(path.join(FIXTURES, 'rows.json'));
@@ -93,6 +96,7 @@ async function main() {
     key: 'sb_publishable_stub',
     timeoutMs: STUB_TIMEOUT_MS,
     out,
+    today,
   });
 }
 

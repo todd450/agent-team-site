@@ -1,0 +1,26 @@
+{
+  "name": "the same read, with one fact changed",
+  "why": "The pair to same-read-twice: a pull that does find something new. The snapshot it writes has to carry the day it found it, so the date on the facts is the day they last moved and not the day somebody happened to run the puller.",
+  "outcome": "ok",
+  "runs": 1,
+  "responses": {
+    "status_steps": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-24",
+          "name": "main requires a pull request",
+          "state": "Done",
+          "detail": "Repository settings are not public, so this line carries a date and no link."
+        },
+        {
+          "position": 2,
+          "as_of": "2026-10-27",
+          "name": "Ops watch checks the site nightly",
+          "state": "Done · 3 nights",
+          "detail": "Installed in [PR #2](https://github.com/todd450/founding-agents-site/pull/2); three runs green."
+        }
+      ]
+    }
+  }
+}

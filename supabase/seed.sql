@@ -6,11 +6,11 @@ insert into status_steps (position, as_of, name, state, detail) values
   (3, '2026-10-26', 'build runs to merge on real issues', 'Done · 4 of 3–5', 'Four runs have merged on real issues: [issue #4](https://github.com/todd450/founding-agents-site/issues/4), built in [PR #7](https://github.com/todd450/founding-agents-site/pull/7); [issue #5](https://github.com/todd450/founding-agents-site/issues/5), built in [PR #8](https://github.com/todd450/founding-agents-site/pull/8); [issue #6](https://github.com/todd450/founding-agents-site/issues/6), built in [PR #9](https://github.com/todd450/founding-agents-site/pull/9); and [issue #10](https://github.com/todd450/founding-agents-site/issues/10), built in [PR #11](https://github.com/todd450/founding-agents-site/pull/11) — this merge itself. Four of the three to five build issues this step needed are now in, so the step is done.'),
   (4, '2026-10-26', 'propose reaches the founder as one item', 'Done', 'Its done condition was one real run on this site''s brief, and that run is the queue item on [issue #1](https://github.com/todd450/founding-agents-site/issues/1), which reached the founder on 26 Oct 2026.');
 
-insert into costs (position, as_of, figure, lead, claim, source) values
-  (1, '2026-10-26', '5,410', 'Volume nobody can read.', 'Commits in under five months — more change than one person can review, let alone remember.', 'Recorded 26 Oct 2026'),
-  (2, '2026-10-26', '61,365 lines, in 8 days', 'Work undone as fast as it was done.', 'Thirty-two removal commits deleting what had just been written.', 'Recorded 26 Oct 2026'),
-  (3, '2026-10-26', '731', 'Sweeping up after the fact.', 'Bug-sweep and audit commits: quality bolted on at the end instead of decided at the start.', 'Recorded 26 Oct 2026'),
-  (4, '2026-10-26', '28 of 28 runs failed', 'Nobody watching.', 'A nightly off-site backup failed every run it ever made, unnoticed, until someone looked.', 'Recorded 26 Oct 2026');
+insert into costs (position, as_of, figure, unit, lead, claim, source) values
+  (1, '2026-10-26', '5,410', null, 'Volume nobody can read.', 'Commits in under five months — more change than one person can review, let alone remember.', 'Recorded 26 Oct 2026'),
+  (2, '2026-10-26', '61,365', 'lines, in 8 days', 'Work undone as fast as it was done.', 'Thirty-two removal commits deleting what had just been written.', 'Recorded 26 Oct 2026'),
+  (3, '2026-10-26', '731', null, 'Sweeping up after the fact.', 'Bug-sweep and audit commits: quality bolted on at the end instead of decided at the start.', 'Recorded 26 Oct 2026'),
+  (4, '2026-10-26', '28', 'of 28 runs failed', 'Nobody watching.', 'A nightly off-site backup failed every run it ever made, unnoticed, until someone looked.', 'Recorded 26 Oct 2026');
 
 insert into measures (position, as_of, label, bar, current, standing) values
   (1, '2026-10-26', 'Merges not made by the integrator', '0', '0', 'hit'),

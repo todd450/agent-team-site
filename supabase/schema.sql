@@ -10,10 +10,14 @@ create table status_steps (
   detail text not null
 );
 
+-- figure is the number on its own and unit the small tail beside it ("61,365" and
+-- "lines, in 8 days"), because the page shows them as two elements at two sizes. unit is null
+-- when the figure stands alone, as standing is when a measure has no bar to be judged against.
 create table costs (
   position int primary key check (position > 0),
   as_of date not null,
   figure text not null,
+  unit text,
   lead text not null,
   claim text not null,
   source text not null

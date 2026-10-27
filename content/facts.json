@@ -35,6 +35,7 @@
       "position": 1,
       "as_of": "2026-10-26",
       "figure": "5,410",
+      "unit": "",
       "lead": "Volume nobody can read.",
       "claim": "Commits in under five months — more change than one person can review, let alone remember.",
       "source": "Recorded 26 Oct 2026"
@@ -42,7 +43,8 @@
     {
       "position": 2,
       "as_of": "2026-10-26",
-      "figure": "61,365 lines, in 8 days",
+      "figure": "61,365",
+      "unit": "lines, in 8 days",
       "lead": "Work undone as fast as it was done.",
       "claim": "Thirty-two removal commits deleting what had just been written.",
       "source": "Recorded 26 Oct 2026"
@@ -51,6 +53,7 @@
       "position": 3,
       "as_of": "2026-10-26",
       "figure": "731",
+      "unit": "",
       "lead": "Sweeping up after the fact.",
       "claim": "Bug-sweep and audit commits: quality bolted on at the end instead of decided at the start.",
       "source": "Recorded 26 Oct 2026"
@@ -58,7 +61,8 @@
     {
       "position": 4,
       "as_of": "2026-10-26",
-      "figure": "28 of 28 runs failed",
+      "figure": "28",
+      "unit": "of 28 runs failed",
       "lead": "Nobody watching.",
       "claim": "A nightly off-site backup failed every run it ever made, unnoticed, until someone looked.",
       "source": "Recorded 26 Oct 2026"

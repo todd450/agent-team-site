@@ -27,7 +27,13 @@ import unittest
 from datetime import date
 from pathlib import Path
 
+# The one Python copy of "where a link may point", shared with the page's own
+# link tests in tests/test_shell.py and checked against the puller's copy in
+# tests/test_links.py.
+from links import allowed_link
+
 ROOT = Path(__file__).resolve().parent.parent
+INDEX_HTML = ROOT / "index.html"
 SNAPSHOT = ROOT / "content" / "facts.json"
 PULLER = ROOT / "scripts" / "pull-facts.js"
 SCHEMA_SQL = ROOT / "supabase" / "schema.sql"
@@ -39,15 +45,14 @@ STUB_PULL = Path(__file__).resolve().parent / "stub_pull.js"
 # row carries. This is the shape the generator is written against.
 KINDS = {
     "status_steps": ["position", "as_of", "name", "state", "detail"],
-    "costs": ["position", "as_of", "figure", "lead", "claim", "source"],
+    # A cost's figure is the number alone and its unit the small tail beside
+    # it ("61,365" and "lines, in 8 days"), because that is how the page shows
+    # them -- two elements, two sizes. Folded into one string they could not
+    # be told apart again without markup in the text, which no fact carries.
+    "costs": ["position", "as_of", "figure", "unit", "lead", "claim", "source"],
     "measures": ["position", "as_of", "label", "bar", "current", "standing"],
     "record_entries": ["position", "as_of", "headline", "entry"],
 }
-
-# The same allowlist the page's link tests use (tests/test_shell.py).
-REPO_PREFIX = "https://github.com/todd450/founding-agents-site"
-PAGES_PREFIX = "https://todd450.github.io/founding-agents-site"
-ALLOWED_LINK_PREFIXES = (REPO_PREFIX, PAGES_PREFIX)
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s)\]]+|(?<![\w/])//[^\s)\]]+")
@@ -56,19 +61,6 @@ URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s)\]]+|(?<![\w/])//[^\s)\]]+"
 LINK_TARGET_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
 CODE_SPAN_RE = re.compile(r"`[^`]*`")
 STANDINGS = {"hit", "pending", "miss", ""}
-
-
-def allowed_link(link):
-    # A prefix match is only real if what follows it is a path, query or
-    # fragment separator (or nothing) -- otherwise a host and path that merely
-    # begin with this repo's address, and carry on into a different name such
-    # as the lookalike in fixtures/failed-read/off-site-link.json, match too.
-    for prefix in ALLOWED_LINK_PREFIXES:
-        if link.startswith(prefix):
-            rest = link[len(prefix):]
-            if rest == "" or rest[0] in "/?#":
-                return True
-    return False
 
 
 def markup_outside_backticks(value):
@@ -87,6 +79,31 @@ def links_outside_allowlist(value):
     [text](url) points at, and any bare URL alongside them."""
     targets = LINK_TARGET_RE.findall(value) + URL_RE.findall(value)
     return [target for target in targets if not allowed_link(target)]
+
+
+EV_BLOCK_RE = re.compile(r'<div class="ev">(.*?)</div>', re.DOTALL)
+EV_FIGURE_RE = re.compile(r'<span class="ev-figure">(.*?)</span>', re.DOTALL)
+EV_UNIT_RE = re.compile(r'<span class="ev-unit">(.*?)</span>', re.DOTALL)
+
+
+def flat(text):
+    """One line of text, however the page wrapped it."""
+    return " ".join(text.split())
+
+
+def costs_on_the_page(html):
+    """The figure and the unit of each cost index.html shows today, in the
+    order it shows them. The page renders the two as separate elements at
+    separate sizes, so the snapshot has to carry them as separate values."""
+    costs = []
+    for block in EV_BLOCK_RE.findall(html):
+        unit = EV_UNIT_RE.search(block)
+        figure = EV_FIGURE_RE.search(EV_UNIT_RE.sub("", block))
+        if figure is None:
+            continue
+        costs.append({"figure": flat(figure.group(1)),
+                      "unit": flat(unit.group(1)) if unit else ""})
+    return costs
 
 
 def sql_literals(block):
@@ -176,6 +193,21 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
 
     def test_every_url_in_a_fact_is_in_the_page_s_allowlist(self):
         self.assert_links_are_allowed(self.snapshot)
+
+    def test_each_cost_the_page_shows_keeps_its_figure_and_its_unit_apart(self):
+        # The snapshot is what the page will be generated from, so whatever
+        # the page shows today it has to be able to say. Two of the four
+        # costs are a big number with a small tail beside it; a snapshot that
+        # folded "61,365" and "lines, in 8 days" into one string could not
+        # put that tail back without markup, and facts carry no markup.
+        shown = costs_on_the_page(INDEX_HTML.read_text(encoding="utf-8"))
+        self.assertTrue(shown, "no costs found on the page")
+        self.assertEqual(len(shown), len(self.snapshot["costs"]),
+                         "the page and the snapshot do not show the same number of costs")
+        for cost, row in zip(shown, self.snapshot["costs"]):
+            with self.subTest(position=row["position"]):
+                self.assertEqual(row["figure"], cost["figure"])
+                self.assertEqual(row["unit"], cost["unit"])
 
     def test_a_measure_s_standing_is_one_of_the_four_values(self):
         for row in self.snapshot["measures"]:
@@ -301,10 +333,11 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
     def tmpdir(self):
         return Path(self.enterContext(tempfile.TemporaryDirectory()))
 
-    def run_puller(self, scenario, out):
-        return subprocess.run(
-            [self.node, str(STUB_PULL), str(scenario), str(out)],
-            capture_output=True, text=True, timeout=60, cwd=str(ROOT))
+    def run_puller(self, scenario, out, today=None):
+        command = [self.node, str(STUB_PULL), str(scenario), str(out)]
+        if today is not None:
+            command.append(today)
+        return subprocess.run(command, capture_output=True, text=True, timeout=60, cwd=str(ROOT))
 
     def test_fixtures_cover_both_a_good_read_and_failing_ones(self):
         outcomes = [load(path)["outcome"] for path in scenarios()]
@@ -340,6 +373,27 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
                     written.append(out.read_bytes())
                 self.assertEqual(len(set(written)), 1,
                                  "a pull with nothing new in it must produce an empty diff")
+
+    def test_pulled_at_moves_only_on_the_day_a_fact_changed(self):
+        # The stamp says when these facts last moved. A pull weeks later that
+        # finds the same rows writes the same bytes -- an empty diff, not a
+        # date change to review -- and the first pull that does find
+        # something new carries the day it found it.
+        out = self.tmpdir() / "facts.json"
+        same = FAILED_READ / "same-read-twice.json"
+        changed = FAILED_READ / "same-read-with-one-fact-changed.json"
+
+        self.assertEqual(self.run_puller(same, out, today="2026-03-01").returncode, 0)
+        first = out.read_bytes()
+        self.assertEqual(load(out)["pulled_at"], "2026-03-01")
+
+        self.assertEqual(self.run_puller(same, out, today="2026-04-02").returncode, 0)
+        self.assertEqual(out.read_bytes(), first,
+                         "a pull that found nothing new must leave the file byte for byte")
+
+        self.assertEqual(self.run_puller(changed, out, today="2026-04-02").returncode, 0)
+        self.assertEqual(load(out)["pulled_at"], "2026-04-02",
+                         "a pull that found a changed fact must carry that day")
 
     def test_a_bad_read_leaves_an_existing_snapshot_untouched(self):
         tmp = self.tmpdir()

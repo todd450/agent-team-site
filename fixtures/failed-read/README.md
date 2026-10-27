@@ -15,7 +15,8 @@ suite never touches the network.
 
 | Scenario | The read |
 | --- | --- |
-| `same-read-twice.json` | the same four reads, run twice -- the only one that must succeed, and twice over it must write byte-identical files |
+| `same-read-twice.json` | the same four reads, run twice -- it must succeed, and twice over it must write byte-identical files, whatever day the second run happens on |
+| `same-read-with-one-fact-changed.json` | the same reads with one fact changed: it must succeed, and the snapshot must carry the day the change was found |
 | `refused-connection.json` | the connection is refused: the project is paused, or there is no network |
 | `slow-read.json` | the read never answers, and must time out rather than hang the build |
 | `server-error.json` | a 500 from the API |
@@ -29,6 +30,11 @@ suite never touches the network.
 | `markup-in-text.json` | a row with a tag outside backticks, which would put markup on the page |
 | `off-site-link.json` | a row linking off this site, which the nightly link check would open `red` on |
 | `script-scheme-link.json` | a row whose link points at a `javascript:` scheme rather than at a page |
+| `link-with-a-dot-dot-segment.json` | a link that starts with this repo's address and walks out of it on `..` |
+| `link-with-backslashes.json` | the same walk on backslashes, which a browser folds into slashes |
+| `link-with-escaped-dot-segments.json` | the same walk on `%2e%2e`, with no literal `..` to be seen |
+| `link-with-a-control-character.json` | the same walk past a tab and a newline, which a browser strips before it reads the address |
+| `pages-link-with-a-dot-dot-segment.json` | the same walk out of the Pages site, onto another site on the same account |
 
 A scenario file:
 

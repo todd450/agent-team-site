@@ -1,5 +1,5 @@
 {
-  "_why": "The rows every scenario in this folder starts from: one good read of all four fact tables, small but carrying the shapes that matter -- a [text](url) link to this repo, a literal tag quoted in backticks, and a measure whose standing is empty. A scenario names only the table it breaks; the rest read these.",
+  "_why": "The rows every scenario in this folder starts from: one good read of all four fact tables, small but carrying the shapes that matter -- a [text](url) link to this repo, a literal tag quoted in backticks, a cost whose figure stands alone with no unit beside it, and a measure whose standing is empty. A scenario names only the table it breaks; the rest read these.",
   "status_steps": [
     {
       "position": 1,
@@ -21,6 +21,7 @@
       "position": 1,
       "as_of": "2026-10-26",
       "figure": "5,410",
+      "unit": null,
       "lead": "Volume nobody can read.",
       "claim": "Commits in under five months.",
       "source": "Recorded 26 Oct 2026"
@@ -28,7 +29,8 @@
     {
       "position": 2,
       "as_of": "2026-10-26",
-      "figure": "28 of 28 runs failed",
+      "figure": "28",
+      "unit": "of 28 runs failed",
       "lead": "Nobody watching.",
       "claim": "A nightly off-site backup failed every run it ever made.",
       "source": "Recorded 26 Oct 2026"

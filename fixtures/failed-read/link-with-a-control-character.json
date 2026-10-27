@@ -1,0 +1,20 @@
+{
+  "name": "a link hiding a tab and a newline",
+  "why": "A browser strips tabs and newlines from an address before it parses it, so the '..' that reads as broken text here is a working escape to https://github.com/evil/x.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "Merges not made by the integrator",
+          "bar": "0",
+          "current": "[0](https://github.com/todd450/founding-agents-site/\t.\n./../evil/x)",
+          "standing": "hit"
+        }
+      ]
+    }
+  }
+}
