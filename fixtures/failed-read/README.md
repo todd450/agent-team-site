@@ -38,6 +38,10 @@ suite never touches the network.
 | `link-text-with-brackets.json` | a link whose text holds brackets, which a renderer reads as a link and the reader finds no target in at all |
 | `linked-image-link.json` | a link wrapped around an image: the reader sees the image's target and not the one that reaches the href |
 | `link-text-with-an-escaped-bracket.json` | the same miss past a backslash-escaped bracket, an escape a renderer honours and the reader cannot see |
+| `link-target-with-parentheses.json` | a link whose target holds a balanced pair of parentheses, which a renderer keeps in the address and the reader stops at |
+| `bare-url-with-parentheses.json` | the same address written bare, which a renderer autolinks whole |
+| `reference-style-link.json` | a link written as a reference and defined further down, so the reader finds no target to check at all |
+| `backticks-across-a-blank-line.json` | a tag between two backticks a blank line apart, which no renderer pairs, so what looks quoted is markup |
 
 A scenario file:
 

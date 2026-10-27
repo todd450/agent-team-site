@@ -24,8 +24,11 @@ REPO_PREFIX, PAGES_PREFIX = ALLOWED_LINK_PREFIXES
 # What may follow an allowed prefix: the plain URL characters, and no more.
 # A backslash, a space, a tab or a newline is rewritten or stripped by a
 # browser before it works out where a link goes, so an address carrying one
-# does not say plainly where it lands.
-PLAIN_URL_CHARS_RE = re.compile(r"^[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*$")
+# does not say plainly where it lands. A parenthesis is out with them:
+# CommonMark keeps a balanced pair inside a link's destination, so a reader
+# that stops at the first ")" is left holding a prefix of the address and
+# would vouch for a page nobody wrote down.
+PLAIN_URL_CHARS_RE = re.compile(r"^[A-Za-z0-9\-._~:/?#\[\]@!$&'*+,;=%]*$")
 # A percent escape is fine when it stands for ordinary text (?q=is%3Apr), and
 # is not when it stands for a character that decides where the address goes:
 # %2e is a dot, %2f a slash, %5c a backslash, and %00-%1f and %7f are the
@@ -43,6 +46,16 @@ LINK_TARGET_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
 # A backslash before a bracket or a parenthesis: an escape a renderer honours
 # and this reader cannot see, so the two disagree about where a link ends.
 ESCAPED_BRACKET_RE = re.compile(r"\\[\[\]()]")
+# A parenthesis inside a target the reader did read: a destination may hold a
+# balanced pair, so what the reader stopped at is not where the link ends.
+PAREN_RE = re.compile(r"[()]")
+# The other two spellings of a link, which name their destination elsewhere:
+# a reference or collapsed link ("[text][ref]", "[text][]") and the
+# definition that gives it an address ("[ref]: ..."). Neither carries a "](",
+# and a definition's address needs no "://", so a reader looking for those
+# finds nothing at all where a renderer finds a link.
+REFERENCE_LINK_RE = re.compile(r"\]\[")
+LINK_DEFINITION_RE = re.compile(r"^ {0,3}\[[^\]]*\]:", re.MULTILINE)
 
 
 def link_targets(text):
@@ -51,17 +64,20 @@ def link_targets(text):
 
     A renderer reads more as a link than LINK_TARGET_RE does. CommonMark says
     link text may hold balanced brackets ("[see [this]](...)"), an image may
-    be wrapped in a link ("[![chart](ok.png)](...)"), and a bracket may be
-    backslash-escaped. In each of those this reader finds no target at all,
-    or only the inner one, so the destination a renderer would put in the
-    href is a destination nothing checked -- which is how a "javascript:"
-    target walks past an allowlist.
+    be wrapped in a link ("[![chart](ok.png)](...)"), a bracket may be
+    backslash-escaped, a destination may hold a balanced pair of parentheses
+    ("(.../a(b)/...)"), and a link may name its destination elsewhere
+    ("[text][ref]" with "[ref]: ..."). In each of those this reader finds no
+    target at all, or only part of one, so the destination a renderer would
+    put in the href is a destination nothing checked -- which is how a
+    "javascript:" target walks past an allowlist.
 
     So the reader has to account for every "](" the text contains: whatever
-    is left once the links it did read are taken out must hold none, and a
-    backslash-escaped bracket anywhere is a link it cannot see the end of.
-    When it cannot, it says so and the caller refuses the text rather than
-    vouching for a link it never read.
+    is left once the links it did read are taken out must hold none. Beyond
+    that, a backslash-escaped bracket, a target carrying a parenthesis, a
+    "][" and a line that defines a reference are each a link it cannot see
+    whole. When it cannot, it says so and the caller refuses the text rather
+    than vouching for a link it never read.
 
     Returns (targets, unreadable).
     """
@@ -72,7 +88,11 @@ def link_targets(text):
         return " "  # a space, so taking a link out can join no new "]("
 
     residue = LINK_TARGET_RE.sub(taken, text)
-    unreadable = "](" in residue or ESCAPED_BRACKET_RE.search(text) is not None
+    unreadable = ("](" in residue
+                  or ESCAPED_BRACKET_RE.search(text) is not None
+                  or REFERENCE_LINK_RE.search(text) is not None
+                  or LINK_DEFINITION_RE.search(text) is not None
+                  or any(PAREN_RE.search(target) for target in targets))
     return targets, unreadable
 
 

@@ -61,7 +61,11 @@ KINDS = {
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s)\]]+|(?<![\w/])//[^\s)\]]+")
-CODE_SPAN_RE = re.compile(r"`[^`]*`")
+# What two backticks quote as code: everything between them inside one
+# paragraph. A line break within the paragraph keeps the span, and a blank
+# line ends it -- a renderer pairs neither backtick across a paragraph break,
+# so a tag sitting between them is an element on the page, not code.
+CODE_SPAN_RE = re.compile(r"`[^`\n]*(?:\n(?!\s*\n)[^`\n]*)*`")
 STANDINGS = {"hit", "pending", "miss", ""}
 ADD_COLUMN_RE = re.compile(r"alter table (\w+) add column (\w+)")
 
@@ -193,6 +197,31 @@ class SnapshotRulesMixin:
                             unchecked_links(row[column]), [],
                             f"{kind}.{column} carries a link nothing can vouch for: "
                             f"{row[column]!r}")
+
+
+# A fact's text, and the brackets it would put on the page as markup. A code
+# span is what two backticks enclose inside one paragraph: a line break within
+# the paragraph keeps it, and a blank line ends it, so a renderer pairs
+# neither backtick across one and the tag between them is a real element.
+# (text, the brackets that reach the page)
+MARKUP = [
+    ("Nothing here is markup at all.", []),
+    ("A literal `<li>` in backticks is quoted code.", []),
+    ("A span the paragraph's own wrap broke: `<li>\nand more`.", []),
+    ("An <img src=x> outside backticks is markup.", ["<", ">"]),
+    ("`x\n\n<img src=x onerror=alert(1)>`", ["<", ">"]),
+    ("An unclosed `backtick leaves what is quoted unclear.", ["`"]),
+]
+
+
+class MarkupReaderTests(unittest.TestCase):
+    """What counts as quoted code in a fact's text, and what reaches the page
+    as markup."""
+
+    def test_only_a_bracket_a_renderer_would_emit_is_reported(self):
+        for text, brackets in MARKUP:
+            with self.subTest(text=text):
+                self.assertEqual(markup_outside_backticks(text), brackets)
 
 
 class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):

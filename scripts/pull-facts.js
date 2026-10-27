@@ -61,12 +61,20 @@ const ALLOWED_LINK_PREFIXES = [
 
 // The same rule as tests/links.py, which checks the snapshot and the page;
 // tests/test_links.py runs both copies over the same cases.
-const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]*$/;
+// A parenthesis is not among the plain URL characters: CommonMark keeps a
+// balanced pair inside a link's destination, so a reader that stops at the
+// first ")" is left holding a prefix of the address and would vouch for a
+// page nobody wrote down.
+const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$&'*+,;=%]*$/;
 const ESCAPE = /%[0-9A-Fa-f]{2}/g;
 const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const CODE_SPAN = /`[^`]*`/g;
+// What two backticks quote as code: everything between them inside one
+// paragraph. A line break within the paragraph keeps the span, and a blank
+// line ends it -- a renderer pairs neither backtick across a paragraph
+// break, so a tag sitting between them is an element on the page, not code.
+const CODE_SPAN = /`[^`\n]*(?:\n(?!\s*\n)[^`\n]*)*`/g;
 const URL_IN_TEXT = /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s)\]]+|(?<![\w/])\/\/[^\s)\]]+/g;
 // What a [text](url) link points at, whatever its scheme: a target of
 // "javascript:..." or a relative path carries no "://" for URL_IN_TEXT.
@@ -75,6 +83,16 @@ const LINK_TARGET = /\[[^\]]*\]\(([^)]*)\)/g;
 // honours and this reader cannot see, so the two disagree about where a link
 // ends.
 const ESCAPED_BRACKET = /\\[[\]()]/;
+// A parenthesis inside a target the reader did read: a destination may hold
+// a balanced pair, so what the reader stopped at is not where the link ends.
+const PAREN = /[()]/;
+// The other two spellings of a link, which name their destination elsewhere:
+// a reference or collapsed link ("[text][ref]", "[text][]") and the
+// definition that gives it an address ("[ref]: ..."). Neither carries a
+// "](", and a definition's address needs no "://", so a reader looking for
+// those finds nothing at all where a renderer finds a link.
+const REFERENCE_LINK = /\]\[/;
+const LINK_DEFINITION = /^ {0,3}\[[^\]]*\]:/m;
 
 class PullError extends Error {}
 
@@ -126,24 +144,32 @@ function isAllowedLink(link) {
 //
 // A renderer reads more as a link than LINK_TARGET does. CommonMark says link
 // text may hold balanced brackets ("[see [this]](...)"), an image may be
-// wrapped in a link ("[![chart](ok.png)](...)"), and a bracket may be
-// backslash-escaped. In each of those this reader finds no target at all, or
-// only the inner one, so the destination a renderer would put in the href is
-// a destination nothing checked -- which is how a "javascript:" target walks
-// past an allowlist.
+// wrapped in a link ("[![chart](ok.png)](...)"), a bracket may be
+// backslash-escaped, a destination may hold a balanced pair of parentheses
+// ("(.../a(b)/...)"), and a link may name its destination elsewhere
+// ("[text][ref]" with "[ref]: ..."). In each of those this reader finds no
+// target at all, or only part of one, so the destination a renderer would put
+// in the href is a destination nothing checked -- which is how a
+// "javascript:" target walks past an allowlist.
 //
 // So the reader accounts for every "](" the text contains: whatever is left
-// once the links it did read are taken out must hold none, and a
-// backslash-escaped bracket anywhere is a link it cannot see the end of.
-// When it cannot read one whole it says so, and the pull refuses the fact
-// rather than vouching for a link it never read.
+// once the links it did read are taken out must hold none. Beyond that, a
+// backslash-escaped bracket, a target carrying a parenthesis, a "][" and a
+// line that defines a reference are each a link it cannot see whole. When it
+// cannot read one whole it says so, and the pull refuses the fact rather than
+// vouching for a link it never read.
 function linkTargets(text) {
   const targets = [];
   const residue = text.replace(LINK_TARGET, (span, target) => {
     targets.push(target);
     return ' '; // a space, so taking a link out can join no new "]("
   });
-  return { targets, unreadable: residue.includes('](') || ESCAPED_BRACKET.test(text) };
+  const unreadable = residue.includes('](')
+    || ESCAPED_BRACKET.test(text)
+    || REFERENCE_LINK.test(text)
+    || LINK_DEFINITION.test(text)
+    || targets.some((target) => PAREN.test(target));
+  return { targets, unreadable };
 }
 
 function isRealDate(value) {

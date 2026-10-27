@@ -1,0 +1,18 @@
+{
+  "name": "a bare address holding a balanced pair of parentheses",
+  "why": "The same walk out of the allowlist written without a link's brackets. A renderer autolinks the whole address and lands on github.com/attacker/evil, while the reader's bare-URL pattern stops at the first ')' and leaves an allowed prefix behind.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "See https://github.com/todd450/founding-agents-site/a(b)/../../attacker/evil for detail."
+        }
+      ]
+    }
+  }
+}

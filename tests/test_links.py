@@ -66,6 +66,13 @@ REFUSED = [
     (f"{PAGES_PREFIX}/..?q=1", "todd450.github.io/, which answers 404"),
     (f"{PAGES_PREFIX}/..#top", "todd450.github.io/, which answers 404"),
     (f"{PAGES_PREFIX}/..\n", "todd450.github.io/, which answers 404"),
+    # A destination may hold parentheses when they are balanced, so a reader
+    # that stops at the first ")" reads less of the address than a renderer
+    # does. Neither the whole address nor the prefix a reader is left holding
+    # is a link this site vouches for.
+    (f"{REPO_PREFIX}/a(b)/../../attacker/evil", "github.com/attacker/evil, past balanced "
+                                                "parentheses a renderer keeps in the address"),
+    (f"{REPO_PREFIX}/a(b", "a prefix of that address, which is not the address written down"),
     (f"{REPO_PREFIX}-evil/pull/2", "a repository whose name merely starts with this one's"),
     (f"{REPO_PREFIX}@evil.example/x", "evil.example, with this repo's address as a username"),
     ("https://github.com/todd450/founding-agents", "the private plugin repo"),
@@ -107,6 +114,15 @@ UNREADABLE = [
      "one link the reader does read, and one it does not"),
     (f"[a]({REPO_PREFIX}/x)](javascript:alert(1))",
      "a target left over once the link the reader did read is taken out"),
+    (f"Read [the plan]({REPO_PREFIX}/a(b)/../../attacker/evil) first.",
+     "a link to github.com/attacker/evil: a destination may hold balanced parentheses, so the "
+     "reader stops at the first ')' and is left with an allowed prefix of the address"),
+    ("See [the writeup][r] for detail.\n\n[r]: javascript:alert(1)",
+     "a reference link to javascript:, with no '](' anywhere for the reader to find"),
+    ("See [the writeup][] for detail.\n\n[the writeup]: javascript:alert(1)",
+     "the same link, collapsed"),
+    ("[r]: javascript:alert(1)",
+     "a definition on its own, which gives a reference in any text beside it its destination"),
 ]
 
 

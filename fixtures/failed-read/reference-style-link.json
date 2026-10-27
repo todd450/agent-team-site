@@ -1,0 +1,18 @@
+{
+  "name": "a link written as a reference and defined further down",
+  "why": "A reference link carries no '](' for the reader to find and its definition carries no '://' for the bare-URL pattern, so nothing is extracted and a 'javascript:' destination reaches the href unchecked. A link spelled in a form this reader cannot read whole must refuse the fact.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "See [the writeup][r] for detail.\n\n[r]: javascript:alert(1)"
+        }
+      ]
+    }
+  }
+}
