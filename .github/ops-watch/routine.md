@@ -14,6 +14,8 @@ never re-enable or rerun anything yourself: say what to do in the issue.
 This runs in the cloud, where GitHub's GraphQL API is blocked, so `gh issue` and `gh pr` fail. Use
 the REST API through `gh api` for everything. `gh repo view` is GraphQL too: take `<owner>/<repo>`
 from `git remote get-url origin`.
+Only this repo's own REST paths work: anything outside `repos/<owner>/<repo>/`, such as `search/`,
+gets a 403, and so does fetching the live site.
 
 - Workflows: `gh api repos/<owner>/<repo>/actions/workflows`
 - A workflow's latest runs: `gh api "repos/<owner>/<repo>/actions/workflows/<id>/runs?per_page=5"`
@@ -22,6 +24,10 @@ from `git remote get-url origin`.
 - Update one: `gh api -X PATCH repos/<owner>/<repo>/issues/<n> -f body=...`
 - Close one: comment `gh api -X POST repos/<owner>/<repo>/issues/<n>/comments -f body=...`, then
   `gh api -X PATCH repos/<owner>/<repo>/issues/<n> -f state=closed`
+- What GitHub Pages serves now: `gh api repos/<owner>/<repo>/pages/builds/latest` (its commit and status)
+- Whether one commit includes another: `gh api repos/<owner>/<repo>/compare/<older>...<newer>` (`ahead`
+  or `identical` when it does)
+- A file as deployed: `gh api "repos/<owner>/<repo>/contents/<path>?ref=<commit>" -H "Accept: application/vnd.github.raw"`
 
 ## The checks
 
@@ -33,11 +39,15 @@ Run every check below, then every check in `.github/ops-watch/watch.md`.
    its schedule says it should have, or when its latest scheduled run failed. A check that cannot
    report its own silence is what this check is for.
 2. **`main` passes.** Red when the latest run of the `ci` workflow on the default branch failed.
-3. **Merged changes are live.** For each pull request merged in the last day (`gh api
-   "repos/<owner>/<repo>/pulls?state=closed&sort=updated&direction=desc&per_page=20"`, those with
-   `merged_at` in the last day), and when `watch.md` gives the product's address: fetch it and
-   check that what the PR's description says it does shows in the live product. Red when a merged
-   change is not live a day later, or the live product is broken where it changed.
+3. **Merged changes are live.** For a product GitHub Pages serves: list the pull requests merged in
+   the last day (`gh api "repos/<owner>/<repo>/pulls?state=closed&sort=updated&direction=desc&per_page=20"`,
+   those with `merged_at` in the last day). Read what Pages serves now, then for each merge older
+   than an hour compare its merge commit with the served one. Red when the latest Pages build
+   errored, when a merge older than an hour is not in what is served, or when the served files
+   contradict what a merged PR's description says it does (read them at the served commit). The
+   live site cannot be fetched from the cloud, so the served commit is the evidence. A product
+   served elsewhere says in `watch.md` how to read what is deployed; with neither, this check is
+   not run.
 4. **Spend.** When `watch.md` sets a weekly budget: add up the totals of the run reports posted in
    the last seven days (issue comments starting `**Run report**`, from `gh api
    "repos/<owner>/<repo>/issues/comments?since=<seven days ago>&per_page=100"`). Red when the sum

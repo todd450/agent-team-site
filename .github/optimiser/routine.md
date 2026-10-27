@@ -13,10 +13,12 @@ Read only, apart from issues. Never push, never change code, settings or workflo
 This runs in the cloud, where GitHub's GraphQL API is blocked, so `gh issue` and `gh pr` fail. Use
 the REST API through `gh api` for everything, and take `<owner>/<repo>` from
 `git remote get-url origin`.
+Only this repo's own REST paths work: anything outside `repos/<owner>/<repo>/`, such as `search/`,
+gets a 403, and so does fetching the live site.
 
 - Comments since a date: `gh api "repos/<owner>/<repo>/issues/comments?since=<date>&per_page=100"`
 - An issue: `gh api repos/<owner>/<repo>/issues/<n>`
-- Search: `gh api -X GET search/issues -f q="repo:<owner>/<repo> <terms>"`
+- Every issue and pull request, to find one by its title: `gh api "repos/<owner>/<repo>/issues?state=all&per_page=100"`
 - Open an issue: `gh api -X POST repos/<owner>/<repo>/issues -f title=... -f body=... -f "labels[]=needs-founder"`
 - Comment: `gh api -X POST repos/<owner>/<repo>/issues/<n>/comments -f body=...`
 
@@ -44,7 +46,7 @@ the REST API through `gh api` for everything, and take `<owner>/<repo>` from
   last, and one sentence on what changed. No numbers to show is a one-line comment saying so.
 - **At most three proposals,** each its own issue titled `Optimiser: <the change in a few words>`,
   labelled `needs-founder`: what to change, the number it moves, measured before and expected after,
-  and what it costs to build. Search for an open or closed issue with the same title first, and
+  and what it costs to build. Look in the list of issues for one, open or closed, with the same title first, and
   never propose the same change twice in a month. The founder adds `decided` to the ones to build.
 - Never propose a cut to a check, a review or a role to save tokens alone. Name the cost and leave
   the trade to the founder.
