@@ -1,0 +1,47 @@
+{
+  "extends": ["stylelint-config-recommended"],
+  "plugins": ["stylelint-declaration-strict-value"],
+  "overrides": [
+    {
+      "files": ["**/*.html"],
+      "customSyntax": "postcss-html"
+    },
+    {
+      "files": ["tokens.css"],
+      "rules": {
+        "color-no-hex": null,
+        "color-named": null,
+        "function-disallowed-list": null,
+        "property-disallowed-list": null,
+        "scale-unlimited/declaration-strict-value": null
+      }
+    }
+  ],
+  "rules": {
+    "property-disallowed-list": ["/^--/"],
+    "color-no-hex": true,
+    "color-named": "never",
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "color-mix"],
+    "scale-unlimited/declaration-strict-value": [
+      [
+        "/color$/",
+        "background",
+        "fill",
+        "stroke",
+        "font",
+        "font-family",
+        "/^margin/",
+        "/^padding/",
+        "/gap$/"
+      ],
+      {
+        "ignoreValues": {
+          "": ["transparent", "currentColor", "inherit", "none", "auto", "0"],
+          "/gap$/": ["1px"]
+        },
+        "expandShorthand": true,
+        "disableFix": true
+      }
+    ]
+  }
+}

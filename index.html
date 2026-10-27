@@ -71,6 +71,9 @@
     gap:var(--s2);
   }
   .dot{width:9px; height:9px; border-radius:50%; display:inline-block; flex:0 0 auto}
+  /* stylelint-disable-next-line scale-unlimited/declaration-strict-value -- an optical
+     nudge, not spacing: it drops the 9px dot onto the cap height of the verdict line's
+     first line, which is a fraction of that line's size and no --sN token expresses. */
   .verdict .dot{margin-top:.45em}
   .dot-green{background:var(--green)}
   .dot-red{background:var(--red)}
@@ -182,6 +185,9 @@
     text-transform:uppercase;
     color:var(--ink-muted);
   }
+  /* stylelint-disable-next-line no-descending-specificity -- .limits-box p:last-child
+     above and .record-list p style paragraphs in different sections, so neither can
+     ever win over the other and the source order between them does not matter. */
   .record-list p{margin:0; font-size:15px; line-height:1.55}
 
   @media (min-width:860px){

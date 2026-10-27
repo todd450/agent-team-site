@@ -1,0 +1,7 @@
+{
+  "extends": ["html-validate:recommended"],
+  "rules": {
+    "missing-doctype": "error",
+    "doctype-style": ["error", { "style": "lowercase" }]
+  }
+}
