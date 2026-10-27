@@ -1,8 +1,9 @@
 {
   "name": "a link that walks out on backslashes",
-  "why": "A browser folds a backslash into a slash before it resolves the path, so this lands on https://github.com/attacker/evil too. Refusing the literal '..' alone would let this one through.",
+  "why": "A browser folds a backslash into a slash before it resolves the path, so this lands on https://github.com/attacker/evil too, and refusing the literal '..' alone would let it through. A backslash is now refused wherever it appears in a fact's text, so that is the rule this fails on, before its links are read; the address itself is pinned as refused in tests/test_links.py.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "carries a backslash",
   "responses": {
     "record_entries": {
       "rows": [

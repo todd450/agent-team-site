@@ -3,6 +3,7 @@
   "why": "CommonMark says link text may hold balanced brackets, so a renderer reads this as a link to javascript:. The snapshot's reader stops at the first ']' and finds no target at all, so the destination reaches the page unchecked: a reader that cannot read a link whole must refuse the fact, not pass it.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
   "responses": {
     "record_entries": {
       "rows": [

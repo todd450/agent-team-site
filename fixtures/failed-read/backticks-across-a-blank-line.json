@@ -1,8 +1,9 @@
 {
   "name": "markup between two backticks a blank line apart",
-  "why": "A code span ends at the paragraph break, so a renderer pairs neither of these backticks and emits a real element for the tag between them. A reader that treats everything between two backticks as quoted code calls the same text safe, and markup nobody reviewed reaches the page.",
+  "why": "A code span ends at the paragraph break, so a renderer pairs neither of these backticks and emits a real element for the tag between them. A reader that treats everything between two backticks as quoted code calls the same text safe, and markup nobody reviewed reaches the page. A fact is one line for that reason: where a paragraph ends depends on the blocks around the text, which a string does not carry.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "carries a line break",
   "responses": {
     "record_entries": {
       "rows": [

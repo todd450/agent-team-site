@@ -3,6 +3,7 @@
   "why": "%2e is a dot once a browser decodes it, so this resolves to https://github.com/evil with no literal '..' anywhere in the text for a check to spot.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "links off this site",
   "responses": {
     "costs": {
       "rows": [

@@ -3,6 +3,7 @@
   "why": "The address starts with this repo's own, so a plain prefix match says yes, but a browser resolves the '..' segments and opens https://github.com/attacker/evil-repo. What counts is where the link lands, not what it starts with.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "links off this site",
   "responses": {
     "status_steps": {
       "rows": [

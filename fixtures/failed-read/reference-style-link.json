@@ -1,8 +1,9 @@
 {
-  "name": "a link written as a reference and defined further down",
-  "why": "A reference link carries no '](' for the reader to find and its definition carries no '://' for the bare-URL pattern, so nothing is extracted and a 'javascript:' destination reaches the href unchecked. A link spelled in a form this reader cannot read whole must refuse the fact.",
+  "name": "a link written as a reference, defined somewhere else",
+  "why": "A reference link carries no '](' for the reader to find, and the definition that gives it an address sits in another block entirely -- so nothing is extracted and a 'javascript:' destination reaches the href unchecked. A link spelled in a form this reader cannot read whole must refuse the fact.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
   "responses": {
     "record_entries": {
       "rows": [
@@ -10,7 +11,7 @@
           "position": 1,
           "as_of": "2026-10-26",
           "headline": "protection worked by surprise",
-          "entry": "See [the writeup][r] for detail.\n\n[r]: javascript:alert(1)"
+          "entry": "See [the writeup][r] for detail."
         }
       ]
     }

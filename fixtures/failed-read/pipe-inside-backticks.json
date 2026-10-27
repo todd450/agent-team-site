@@ -1,0 +1,19 @@
+{
+  "name": "markup after a pipe inside backticks",
+  "why": "A pipe is a cell separator wherever the text is rendered inside a row, and a cell boundary is read before any inline is, so the backticks here pair for this reader and not for a renderer. One line is no defence on its own: what splits the text is the pipe.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "carries a pipe",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "The flag `x|<img src=a onerror=alert(1)>` is set."
+        }
+      ]
+    }
+  }
+}

@@ -3,6 +3,7 @@
   "why": "The commonest way a bracket lands inside link text. The snapshot's reader sees only the inner image target, which is on this site, and never the outer destination the renderer would put in the href.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
   "responses": {
     "measures": {
       "rows": [

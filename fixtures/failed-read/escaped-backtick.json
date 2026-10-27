@@ -3,6 +3,7 @@
   "why": "A backslash-escaped backtick is a literal backtick, not the start or the end of a code span, so what a reader pairs as a span a renderer reads as plain text with a live tag in it. An escape is a thing this reader cannot see, so a backslash in a fact's text is refused.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "carries a backslash",
   "responses": {
     "record_entries": {
       "rows": [

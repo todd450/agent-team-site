@@ -64,31 +64,63 @@ const ALLOWED_LINK_PREFIXES = [
 // A parenthesis is not among the plain URL characters: CommonMark keeps a
 // balanced pair inside a link's destination, so a reader that stops at the
 // first ")" is left holding a prefix of the address and would vouch for a
-// page nobody wrote down.
-const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$&'*+,;=%]*$/;
+// page nobody wrote down. Nor is an ampersand: a renderer resolves a
+// character reference inside a destination and an HTML parser resolves one
+// inside an href, so ".../&period;&period;/evil" and ".../&#37;2e&#37;2e/evil"
+// are dots and escapes by the time a browser reads them. No "&" means no
+// reference in any spelling; a semicolon goes with it, since it ends one.
+const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$'*+,=%]*$/;
 const ESCAPE = /%[0-9A-Fa-f]{2}/g;
 const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 // What two backticks quote as code: a short literal, between single
-// backticks, on one line.
+// backticks, on one line of text that holds nothing a renderer reads before
+// it reads an inline.
 //
 // A renderer is stricter than it looks here. It closes a run of N backticks
-// only with the next run of exactly N, it reads a backslash-escaped backtick
-// as a literal character rather than a delimiter, and it ends a span where
-// the paragraph ends -- which a list item, a heading or a thematic break does
-// as surely as a blank line, and which depends on the blocks around the text
-// rather than on the text itself. Each of those is a pairing a reader that
-// takes "the next backtick" as the closer gets wrong, and getting it wrong
-// puts a live tag where this reader saw quoted code.
+// only with the next run of exactly N; it reads a backslash-escaped backtick
+// as a literal character rather than a delimiter; it decodes a character
+// reference ("&#96;", "&#60;") before it reads anything at all; and it cuts
+// the text into blocks first, so a line ending or a cell separator can end a
+// span -- or stop one forming -- before any backtick is paired. Each of those
+// is a pairing a reader that takes "the next backtick" as the closer gets
+// wrong, and getting it wrong puts a live tag where this reader saw quoted
+// code.
 //
-// So rather than parse a paragraph, the one form a fact may quote in is a
-// pair of single backticks on one line: a run of two or more, a backslash,
-// and a line whose backticks do not pair are each quoting this reader will
-// not vouch for.
-const CODE_SPAN = /`[^`\n]*`/g;
-const BACKTICK_RUN = /``/;
-const BACKSLASH = /\\/;
+// So rather than parse blocks inside a string that has none, a fact's text is
+// one line that quotes in pairs of single backticks, and each of these is
+// reported instead of read:
+//
+//   "\n"  a line ending, which ends the paragraph and the span with it -- a
+//         blank line, a list item, a heading, a thematic break or the second
+//         row a table needs. CommonMark counts a lone carriage return as a
+//         line ending too, so "\r\r" is a paragraph break exactly as "\n\n"
+//         is.
+//   "\\"  a backslash, an escape a renderer honours and a reader cannot see.
+//   "&"   an ampersand, which may begin a character reference: what the text
+//         says and what the page shows are then two different strings.
+//   "|"   a pipe, a cell separator wherever the text lands in a row: a row is
+//         split into cells before any inline is read, so the backticks on
+//         either side of one never pair.
+//   "`"   backticks this reader cannot pair: a run of two or more, or an odd
+//         number of them.
+//
+// What is left is one line with no escape, no reference and no separator in
+// it, where every run is one backtick long and the count is even. A renderer
+// reads that left to right exactly as this reader does -- nothing before the
+// first backtick can open a construct that swallows it, since any "<" outside
+// the pairs is reported -- so a "<" this reader finds inside a span is inside
+// one for a renderer too, whatever block the text is rendered in.
+const CODE_SPAN = /`[^`\n\r]*`/g;
+// In the order they are reported, so both copies answer any text the same way.
+const UNREADABLE_TEXT = [
+  ['\n', (value) => /[\n\r]/.test(value)],
+  ['\\', (value) => /\\/.test(value)],
+  ['&', (value) => value.includes('&')],
+  ['|', (value) => value.includes('|')],
+  ['`', (value) => /``/.test(value) || (value.match(/`/g) || []).length % 2 !== 0],
+];
 // What a [text](url) link points at, whatever its scheme.
 const LINK_TARGET = /\[[^\]]*\]\(([^)]*)\)/g;
 // A bare address, or anything else a renderer turns into a link on its own.
@@ -202,33 +234,46 @@ function isRealDate(value) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
 }
 
-// The brackets this text would put on the page as markup -- or a backtick,
-// reported instead when this reader cannot pair the text's backticks the way
-// a renderer would, because then what is quoted as code is nobody's guess.
-// The same reader as tests/links.py; tests/check_links.js runs both copies
-// over the same texts.
+// The brackets this text would put on the page as markup -- or, when this
+// reader cannot read the text the way a renderer would, the character that
+// makes it unreadable, because then what is quoted as code, and what the page
+// would show, is nobody's guess. The same reader as tests/links.py;
+// tests/check_links.js runs both copies over the same texts.
 function markupOutsideBackticks(value) {
-  if (BACKTICK_RUN.test(value) || BACKSLASH.test(value)
-    || value.split('\n').some((line) => (line.match(/`/g) || []).length % 2 !== 0)) {
-    return ['`'];
-  }
+  const unreadable = UNREADABLE_TEXT
+    .filter(([, carries]) => carries(value))
+    .map(([found]) => found);
+  if (unreadable.length > 0) return unreadable;
   const outside = value.replace(CODE_SPAN, '');
   return ['<', '>'].filter((bracket) => outside.includes(bracket));
 }
 
+// Why each character markupOutsideBackticks reports is a read this script
+// refuses: the text and the page would not say the same thing.
+const UNREADABLE_REASON = {
+  '\n': 'carries a line break, and a fact is one line: a line ending ends the paragraph, and '
+    + 'with it any code span, so what the text quotes depends on blocks it does not carry',
+  '\\': 'carries a backslash, an escape a renderer honours and this reader cannot see, so the '
+    + 'two disagree about what is quoted and where a link ends',
+  '&': 'carries an ampersand, which may begin a character reference: a renderer decodes '
+    + '"&#60;" into a bracket and "&period;" into a dot, so what the text says is not what '
+    + 'the page would show',
+  '|': 'carries a pipe, a cell separator wherever the text is rendered inside a row, which is '
+    + 'read before any code span is paired',
+  '`': 'quotes code in a form this snapshot does not read: a fact quotes a short literal '
+    + 'between single backticks, so what this one quotes is unclear',
+};
+
 // Text columns hold text, never HTML. A link is [text](url) and a literal
 // value is `code`; the generator renders those two and escapes the rest. So a
 // < or > anywhere but inside backticks would reach the page as markup nobody
-// reviewed, and is a read this script refuses.
+// reviewed, and is a read this script refuses -- as is a text whose markup
+// this reader and a renderer would not read the same way.
 function checkText(where, value) {
   if (typeof value !== 'string') fail(`${where} is not text: ${JSON.stringify(value)}`);
-  const brackets = markupOutsideBackticks(value);
-  if (brackets.includes('`')) {
-    fail(`${where} quotes code in a form this snapshot does not read: a fact quotes a short `
-      + 'literal between single backticks on one line, so what this one quotes is unclear');
-  }
-  for (const bracket of brackets) {
-    fail(`${where} carries ${bracket} outside backticks, which would put markup on the page`);
+  for (const found of markupOutsideBackticks(value)) {
+    if (UNREADABLE_REASON[found]) fail(`${where} ${UNREADABLE_REASON[found]}`);
+    fail(`${where} carries ${found} outside backticks, which would put markup on the page`);
   }
   const { targets, unreadable } = linkTargets(value);
   if (unreadable) {

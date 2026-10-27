@@ -3,6 +3,7 @@
   "why": "Claims link to this repo's own public files, PRs and issues. A link anywhere else is one the nightly check cannot vouch for, and the lookalike host below passes a plain prefix match.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "links off this site",
   "responses": {
     "status_steps": {
       "rows": [

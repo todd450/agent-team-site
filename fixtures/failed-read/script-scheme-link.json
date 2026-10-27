@@ -3,6 +3,7 @@
   "why": "The target of a [text](url) carries no '://' when its scheme is javascript:, so a check that only looks for URLs would let it through and the generator would render it as an href. The target holds no parenthesis, so the scheme rule itself is what has to refuse it, not the rule about a link the reader cannot read whole.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "links off this site",
   "responses": {
     "record_entries": {
       "rows": [

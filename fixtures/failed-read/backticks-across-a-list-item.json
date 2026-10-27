@@ -3,6 +3,7 @@
   "why": "A blank line is not the only thing that ends a paragraph: a list item, a heading and a thematic break all interrupt one, and no renderer pairs a backtick across the break. Where a paragraph ends depends on the blocks around the text and not on the text itself, so a code span here never crosses a line break at all.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "carries a line break",
   "responses": {
     "record_entries": {
       "rows": [

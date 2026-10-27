@@ -29,8 +29,13 @@ REPO_PREFIX, PAGES_PREFIX = ALLOWED_LINK_PREFIXES
 # does not say plainly where it lands. A parenthesis is out with them:
 # CommonMark keeps a balanced pair inside a link's destination, so a reader
 # that stops at the first ")" is left holding a prefix of the address and
-# would vouch for a page nobody wrote down.
-PLAIN_URL_CHARS_RE = re.compile(r"^[A-Za-z0-9\-._~:/?#\[\]@!$&'*+,;=%]*$")
+# would vouch for a page nobody wrote down. An ampersand is out with those: a
+# renderer resolves a character reference inside a destination and an HTML
+# parser resolves one inside an href, so ".../&period;&period;/evil" and
+# ".../&#37;2e&#37;2e/evil" are dots and escapes by the time a browser reads
+# them, and no "&" means no reference in any spelling. A semicolon goes too,
+# since it ends one.
+PLAIN_URL_CHARS_RE = re.compile(r"^[A-Za-z0-9\-._~:/?#\[\]@!$'*+,=%]*$")
 # A percent escape is fine when it stands for ordinary text (?q=is%3Apr), and
 # is not when it stands for a character that decides where the address goes:
 # %2e is a dot, %2f a slash, %5c a backslash, and %00-%1f and %7f are the
@@ -69,24 +74,58 @@ REFERENCE_LINK_RE = re.compile(r"\]\[")
 LINK_DEFINITION_RE = re.compile(r"^ {0,3}\[[^\]]*\]:", re.MULTILINE)
 
 # What two backticks quote as code: a short literal, between single
-# backticks, on one line.
+# backticks, on one line of text that holds nothing a renderer reads before
+# it reads an inline.
 #
 # A renderer is stricter than it looks here. It closes a run of N backticks
-# only with the next run of exactly N, it reads a backslash-escaped backtick
-# as a literal character rather than a delimiter, and it ends a span where the
-# paragraph ends -- which a list item, a heading or a thematic break does as
-# surely as a blank line, and which depends on the blocks around the text
-# rather than on the text itself. Each of those is a pairing a reader that
-# takes "the next backtick" as the closer gets wrong, and getting it wrong
-# puts a live tag where this reader saw quoted code.
+# only with the next run of exactly N; it reads a backslash-escaped backtick
+# as a literal character rather than a delimiter; it decodes a character
+# reference ("&#96;", "&#60;") before it reads anything at all; and it cuts
+# the text into blocks first, so a line ending or a cell separator can end a
+# span -- or stop one forming -- before any backtick is paired. Each of those
+# is a pairing a reader that takes "the next backtick" as the closer gets
+# wrong, and getting it wrong puts a live tag where this reader saw quoted
+# code.
 #
-# So rather than parse a paragraph, the one form a fact may quote in is a pair
-# of single backticks on one line: a run of two or more, a backslash, and a
-# line whose backticks do not pair are each quoting this reader will not
-# vouch for.
-CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
-BACKTICK_RUN_RE = re.compile(r"``")
+# So rather than parse blocks inside a string that has none, a fact's text is
+# one line that quotes in pairs of single backticks, and each of these is
+# reported instead of read:
+#
+#   "\n"  a line ending, which ends the paragraph and the span with it -- a
+#         blank line, a list item, a heading, a thematic break or the second
+#         row a table needs. CommonMark counts a lone carriage return as a
+#         line ending too, so "\r\r" is a paragraph break exactly as "\n\n"
+#         is.
+#   "\\"  a backslash, an escape a renderer honours and a reader cannot see.
+#   "&"   an ampersand, which may begin a character reference: what the text
+#         says and what the page shows are then two different strings.
+#   "|"   a pipe, a cell separator wherever the text lands in a row: a row is
+#         split into cells before any inline is read, so the backticks on
+#         either side of one never pair.
+#   "`"   backticks this reader cannot pair: a run of two or more, or an odd
+#         number of them.
+#
+# What is left is one line with no escape, no reference and no separator in
+# it, where every run is one backtick long and the count is even. A renderer
+# reads that left to right exactly as this reader does -- nothing before the
+# first backtick can open a construct that swallows it, since any "<" outside
+# the pairs is reported -- so a "<" this reader finds inside a span is inside
+# one for a renderer too, whatever block the text is rendered in.
+CODE_SPAN_RE = re.compile(r"`[^`\n\r]*`")
+LINE_ENDING_RE = re.compile(r"[\n\r]")
 BACKSLASH_RE = re.compile(r"\\")
+CHARACTER_REFERENCE_RE = re.compile(r"&")
+CELL_SEPARATOR_RE = re.compile(r"\|")
+BACKTICK_RUN_RE = re.compile(r"``")
+
+# In the order they are reported, so both copies answer any text the same way.
+UNREADABLE_TEXT = (
+    ("\n", LINE_ENDING_RE.search),
+    ("\\", BACKSLASH_RE.search),
+    ("&", CHARACTER_REFERENCE_RE.search),
+    ("|", CELL_SEPARATOR_RE.search),
+    ("`", lambda value: BACKTICK_RUN_RE.search(value) or value.count("`") % 2 != 0),
+)
 
 
 def markup_outside_backticks(value):
@@ -95,13 +134,14 @@ def markup_outside_backticks(value):
     renders those two and escapes everything else, so a < or > inside
     backticks is safe and one anywhere else is not.
 
-    A backtick this reader cannot pair the way a renderer would is reported as
-    a backtick, because then what is quoted is nobody's guess: a run of two or
-    more, a backslash, and a line whose backticks do not pair.
+    A text this reader cannot read the way a renderer would reports the
+    character that makes it unreadable instead -- a line ending, a backslash,
+    an ampersand, a pipe or an unpairable backtick -- because then what is
+    quoted, and what the page would show, is nobody's guess.
     """
-    if (BACKTICK_RUN_RE.search(value) or BACKSLASH_RE.search(value)
-            or any(line.count("`") % 2 != 0 for line in value.split("\n"))):
-        return ["`"]
+    unreadable = [found for found, carries in UNREADABLE_TEXT if carries(value)]
+    if unreadable:
+        return unreadable
     outside = CODE_SPAN_RE.sub("", value)
     return [bracket for bracket in ("<", ">") if bracket in outside]
 

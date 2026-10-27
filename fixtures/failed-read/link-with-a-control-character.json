@@ -1,8 +1,9 @@
 {
-  "name": "a link hiding a tab and a newline",
-  "why": "A browser strips tabs and newlines from an address before it parses it, so the '..' that reads as broken text here is a working escape to https://github.com/evil/x.",
+  "name": "a link hiding a tab",
+  "why": "A browser strips a tab from an address before it parses it, so the two segments here that read as broken text are '..' and '..' by the time it resolves them: https://github.com/evil/x. No segment reads as a dot segment literally, so the tab is the only thing that gives this away. (A newline does the same, and a fact carrying one is refused before its links are read at all: see backticks-across-a-blank-line.json.)",
   "outcome": "fail",
   "runs": 1,
+  "fails": "links off this site",
   "responses": {
     "measures": {
       "rows": [
@@ -11,7 +12,7 @@
           "as_of": "2026-10-26",
           "label": "Merges not made by the integrator",
           "bar": "0",
-          "current": "[0](https://github.com/todd450/founding-agents-site/\t.\n./../evil/x)",
+          "current": "[0](https://github.com/todd450/founding-agents-site/.\t./.\t./evil/x)",
           "standing": "hit"
         }
       ]

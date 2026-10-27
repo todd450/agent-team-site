@@ -3,6 +3,7 @@
   "why": "The site's own address has the same hole as the repo's: this one starts with todd450.github.io/founding-agents-site and lands on todd450.github.io/evil/x, another Pages site on the same account.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "links off this site",
   "responses": {
     "status_steps": {
       "rows": [

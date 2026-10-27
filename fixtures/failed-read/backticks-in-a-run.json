@@ -3,6 +3,7 @@
   "why": "A renderer closes a run of N backticks only with the next run of exactly N, so the run of three here opens nothing and the tag is a live element on the page. A reader that pairs each backtick with the next one reads two spans, finds nothing outside them, and the backtick count is even, so neither rule fires.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "quotes code in a form this snapshot does not read",
   "responses": {
     "record_entries": {
       "rows": [

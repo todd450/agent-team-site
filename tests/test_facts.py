@@ -419,7 +419,8 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
         out = tmp / "facts.json"
         before = SNAPSHOT.read_bytes()
         for path in scenarios():
-            if load(path)["outcome"] != "fail":
+            scenario = load(path)
+            if scenario["outcome"] != "fail":
                 continue
             with self.subTest(scenario=path.name):
                 out.write_bytes(before)
@@ -429,6 +430,12 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
                 self.assertEqual(out.read_bytes(), before,
                                  "a failed pull must leave the snapshot exactly as it was")
                 self.assertTrue(result.stderr.strip(), "a failed pull must say why")
+                # A scenario may name a fragment of the reason it exists for.
+                # Without that, a scenario drifts onto some other rule --
+                # which has happened three times -- and still passes.
+                if "fails" in scenario:
+                    self.assertIn(scenario["fails"], result.stderr,
+                                  f"{path.name} no longer fails on the rule it tests")
                 self.assertEqual(list(tmp.iterdir()), [out],
                                  "a failed pull left a temporary file behind")
 
