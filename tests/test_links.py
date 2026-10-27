@@ -123,6 +123,24 @@ UNREADABLE = [
      "the same link, collapsed"),
     ("[r]: javascript:alert(1)",
      "a definition on its own, which gives a reference in any text beside it its destination"),
+    # A fact writes a link one way, [text](url), and this reader reads that
+    # one way whole. A bare address is refused rather than read: a renderer
+    # autolinks it and ends the run at whitespace, keeping the brackets and
+    # parentheses a reader stops at, so the two never agree on where it goes.
+    (f"See {REPO_PREFIX}/a)/../../../attacker/evil for detail.",
+     "an autolink to github.com/attacker/evil: the run ends at the space, and a reader that "
+     "stops at the ')' is left holding an allowed prefix"),
+    (f"See {REPO_PREFIX}/a]/../../../attacker/evil for detail.",
+     "the same address past a ']', which a renderer escapes and keeps in the href"),
+    (f"See {REPO_PREFIX}/pull/35 for detail.",
+     "an autolink into this repo -- where it lands is allowed, and it is still not the one form "
+     "a fact writes a link in"),
+    ("See www.attacker.example/evil for detail.",
+     "an autolink to www.attacker.example/evil: GFM needs no scheme"),
+    ("Mail steal@attacker.example for detail.",
+     "an autolink to mailto:steal@attacker.example"),
+    (f"Served over {REPO_PREFIX[len('https:'):]} now.",
+     "whatever scheme the page was served over, with no scheme in the text to find"),
 ]
 
 

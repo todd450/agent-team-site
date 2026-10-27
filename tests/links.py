@@ -43,6 +43,15 @@ PATH_ENDS_RE = re.compile(r"[?#]")
 # A link, as this reader can read one: [text](target), with no bracket in the
 # text and no ")" in the target.
 LINK_TARGET_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
+# A bare address, or anything else a renderer turns into a link on its own.
+# GFM autolinks a literal "https://..." run, a scheme-relative "//host", a
+# "www." host and an email address, and it ends such a run at whitespace --
+# keeping the brackets and parentheses a reader stops at, so where a reader
+# thinks a bare address ends and where a renderer puts it in the href are two
+# different answers. A fact writes a link one way, [text](url), which this
+# reader reads whole; link-like text in any other form is refused rather than
+# read (decided on #27, 27 Oct 2026).
+LINK_LIKE_RE = re.compile(r"://|//|www\.|@", re.IGNORECASE)
 # A backslash before a bracket or a parenthesis: an escape a renderer honours
 # and this reader cannot see, so the two disagree about where a link ends.
 ESCAPED_BRACKET_RE = re.compile(r"\\[\[\]()]")
@@ -67,17 +76,19 @@ def link_targets(text):
     be wrapped in a link ("[![chart](ok.png)](...)"), a bracket may be
     backslash-escaped, a destination may hold a balanced pair of parentheses
     ("(.../a(b)/...)"), and a link may name its destination elsewhere
-    ("[text][ref]" with "[ref]: ..."). In each of those this reader finds no
-    target at all, or only part of one, so the destination a renderer would
-    put in the href is a destination nothing checked -- which is how a
-    "javascript:" target walks past an allowlist.
+    ("[text][ref]" with "[ref]: ..."); GFM autolinks a bare address with no
+    brackets at all. In each of those this reader finds no target at all, or
+    only part of one, so the destination a renderer would put in the href is
+    a destination nothing checked -- which is how a "javascript:" target
+    walks past an allowlist.
 
     So the reader has to account for every "](" the text contains: whatever
-    is left once the links it did read are taken out must hold none. Beyond
-    that, a backslash-escaped bracket, a target carrying a parenthesis, a
-    "][" and a line that defines a reference are each a link it cannot see
-    whole. When it cannot, it says so and the caller refuses the text rather
-    than vouching for a link it never read.
+    is left once the links it did read are taken out must hold none, and must
+    hold nothing else link-like either. Beyond that, a backslash-escaped
+    bracket, a target carrying a parenthesis, a "][" and a line that defines
+    a reference are each a link it cannot see whole. When it cannot, it says
+    so and the caller refuses the text rather than vouching for a link it
+    never read.
 
     Returns (targets, unreadable).
     """
@@ -89,6 +100,7 @@ def link_targets(text):
 
     residue = LINK_TARGET_RE.sub(taken, text)
     unreadable = ("](" in residue
+                  or LINK_LIKE_RE.search(residue) is not None
                   or ESCAPED_BRACKET_RE.search(text) is not None
                   or REFERENCE_LINK_RE.search(text) is not None
                   or LINK_DEFINITION_RE.search(text) is not None

@@ -60,7 +60,6 @@ KINDS = {
 }
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s)\]]+|(?<![\w/])//[^\s)\]]+")
 # What two backticks quote as code: everything between them inside one
 # paragraph. A line break within the paragraph keeps the span, and a blank
 # line ends it -- a renderer pairs neither backtick across a paragraph break,
@@ -83,14 +82,12 @@ def markup_outside_backticks(value):
 
 def unchecked_links(value):
     """Every link in this text that nothing can vouch for: what each
-    [text](url) points at and any bare URL alongside them, when it lands off
-    this site -- and the text itself when it writes a link the reader cannot
-    read whole, because then the destination a renderer would use is one no
-    allowlist ever saw."""
+    [text](url) points at, when it lands off this site -- and the text itself
+    when it writes a link in any other form, a bare address included, because
+    then the destination a renderer would use is one no allowlist ever saw."""
     targets, unreadable = link_targets(value)
-    outside = [target for target in targets + URL_RE.findall(value)
-               if not allowed_link(target)]
-    return (["a link written in a form the reader cannot read whole"]
+    outside = [target for target in targets if not allowed_link(target)]
+    return (["a link written in a form the reader does not read"]
             if unreadable else []) + outside
 
 

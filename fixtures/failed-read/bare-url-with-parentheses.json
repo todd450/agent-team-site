@@ -1,6 +1,6 @@
 {
   "name": "a bare address holding a balanced pair of parentheses",
-  "why": "The same walk out of the allowlist written without a link's brackets. A renderer autolinks the whole address and lands on github.com/attacker/evil, while the reader's bare-URL pattern stops at the first ')' and leaves an allowed prefix behind.",
+  "why": "The same walk out of the allowlist written without a link's brackets. A renderer autolinks the whole address and lands on github.com/attacker/evil, while a reader of bare addresses stops at the first ')' and leaves an allowed prefix behind. A fact writes a link as [text](url) and nothing else, so a bare address is refused rather than read.",
   "outcome": "fail",
   "runs": 1,
   "responses": {

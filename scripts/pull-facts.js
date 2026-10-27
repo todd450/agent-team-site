@@ -75,10 +75,17 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 // line ends it -- a renderer pairs neither backtick across a paragraph
 // break, so a tag sitting between them is an element on the page, not code.
 const CODE_SPAN = /`[^`\n]*(?:\n(?!\s*\n)[^`\n]*)*`/g;
-const URL_IN_TEXT = /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s)\]]+|(?<![\w/])\/\/[^\s)\]]+/g;
-// What a [text](url) link points at, whatever its scheme: a target of
-// "javascript:..." or a relative path carries no "://" for URL_IN_TEXT.
+// What a [text](url) link points at, whatever its scheme.
 const LINK_TARGET = /\[[^\]]*\]\(([^)]*)\)/g;
+// A bare address, or anything else a renderer turns into a link on its own.
+// GFM autolinks a literal "https://..." run, a scheme-relative "//host", a
+// "www." host and an email address, and it ends such a run at whitespace --
+// keeping the brackets and parentheses a reader stops at, so where a reader
+// thinks a bare address ends and where a renderer puts it in the href are two
+// different answers. A fact writes a link one way, [text](url), which this
+// reader reads whole; link-like text in any other form is refused rather than
+// read (decided on #27, 27 Oct 2026).
+const LINK_LIKE = /:\/\/|\/\/|www\.|@/i;
 // A backslash before a bracket or a parenthesis: an escape a renderer
 // honours and this reader cannot see, so the two disagree about where a link
 // ends.
@@ -147,17 +154,19 @@ function isAllowedLink(link) {
 // wrapped in a link ("[![chart](ok.png)](...)"), a bracket may be
 // backslash-escaped, a destination may hold a balanced pair of parentheses
 // ("(.../a(b)/...)"), and a link may name its destination elsewhere
-// ("[text][ref]" with "[ref]: ..."). In each of those this reader finds no
-// target at all, or only part of one, so the destination a renderer would put
-// in the href is a destination nothing checked -- which is how a
-// "javascript:" target walks past an allowlist.
+// ("[text][ref]" with "[ref]: ..."); GFM autolinks a bare address with no
+// brackets at all. In each of those this reader finds no target at all, or
+// only part of one, so the destination a renderer would put in the href is a
+// destination nothing checked -- which is how a "javascript:" target walks
+// past an allowlist.
 //
 // So the reader accounts for every "](" the text contains: whatever is left
-// once the links it did read are taken out must hold none. Beyond that, a
-// backslash-escaped bracket, a target carrying a parenthesis, a "][" and a
-// line that defines a reference are each a link it cannot see whole. When it
-// cannot read one whole it says so, and the pull refuses the fact rather than
-// vouching for a link it never read.
+// once the links it did read are taken out must hold none, and must hold
+// nothing else link-like either. Beyond that, a backslash-escaped bracket, a
+// target carrying a parenthesis, a "][" and a line that defines a reference
+// are each a link it cannot see whole. When it cannot read one whole it says
+// so, and the pull refuses the fact rather than vouching for a link it never
+// read.
 function linkTargets(text) {
   const targets = [];
   const residue = text.replace(LINK_TARGET, (span, target) => {
@@ -165,6 +174,7 @@ function linkTargets(text) {
     return ' '; // a space, so taking a link out can join no new "]("
   });
   const unreadable = residue.includes('](')
+    || LINK_LIKE.test(residue)
     || ESCAPED_BRACKET.test(text)
     || REFERENCE_LINK.test(text)
     || LINK_DEFINITION.test(text)
@@ -195,10 +205,11 @@ function checkText(where, value) {
   }
   const { targets, unreadable } = linkTargets(value);
   if (unreadable) {
-    fail(`${where} writes a link in a form this snapshot cannot read whole, `
-      + 'so where it points is a destination nothing has checked');
+    fail(`${where} writes a link in a form this snapshot does not read: a fact writes a link `
+      + 'as [text](url) and nothing else, so where this one points is a destination nothing '
+      + 'has checked');
   }
-  for (const link of targets.concat(value.match(URL_IN_TEXT) || [])) {
+  for (const link of targets) {
     if (!isAllowedLink(link)) fail(`${where} links off this site: ${link}`);
   }
   return value;

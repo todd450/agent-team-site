@@ -40,6 +40,10 @@ suite never touches the network.
 | `link-text-with-an-escaped-bracket.json` | the same miss past a backslash-escaped bracket, an escape a renderer honours and the reader cannot see |
 | `link-target-with-parentheses.json` | a link whose target holds a balanced pair of parentheses, which a renderer keeps in the address and the reader stops at |
 | `bare-url-with-parentheses.json` | the same address written bare, which a renderer autolinks whole |
+| `bare-url-with-a-bracket.json` | the same walk written bare past a `]`, which a renderer escapes and keeps in the address |
+| `bare-url-on-this-site.json` | a bare address that does land on this site: a fact writes a link as `[text](url)` and in no other form |
+| `bare-www-address.json` | a bare `www.` host, which a renderer autolinks with no scheme in the text at all |
+| `bare-email-address.json` | a bare email address, which a renderer autolinks as `mailto:` |
 | `reference-style-link.json` | a link written as a reference and defined further down, so the reader finds no target to check at all |
 | `backticks-across-a-blank-line.json` | a tag between two backticks a blank line apart, which no renderer pairs, so what looks quoted is markup |
 
