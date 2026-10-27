@@ -1,0 +1,20 @@
+# CI: runs ./check.sh, the product's one command for every check, on each pull request and on the
+# default branch. Installed by the Founding Agents `setup` skill; branch protection then requires
+# the `check` job, so nothing merges unless every check passes.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: sh ./check.sh
