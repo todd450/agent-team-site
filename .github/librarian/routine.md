@@ -15,10 +15,12 @@ built through the team's own pipeline, like any change.
 This runs in the cloud, where GitHub's GraphQL API is blocked, so `gh issue` and `gh pr` fail. Use
 the REST API through `gh api` for everything, and take `<owner>/<repo>` from
 `git remote get-url origin`.
+Only this repo's own REST paths work: anything outside `repos/<owner>/<repo>/`, such as `search/`,
+gets a 403, and so does fetching the live site.
 
 - Issues closed or updated since a date: `gh api "repos/<owner>/<repo>/issues?state=all&since=<date>&per_page=100"`
 - A pull request's comments: `gh api repos/<owner>/<repo>/issues/<n>/comments`
-- Search: `gh api -X GET search/issues -f q="repo:<owner>/<repo> <terms>"`
+- Every issue and pull request, to find one by its title: `gh api "repos/<owner>/<repo>/issues?state=all&per_page=100"`
 - Open an issue: `gh api -X POST repos/<owner>/<repo>/issues -f title=... -f body=... -f "labels[]=needs-founder"`
 
 ## Incidents from the last seven days
@@ -48,7 +50,7 @@ builder should have known" is not a finding; the missing check is.
 - **At most three issues a week,** each titled `Lesson: <the guard in a few words>` or
   `Prune: <what to remove>`, labelled `needs-founder`. Each says the incident or the dead guard with
   links, how it got through, the guard to add or remove, and where it lives (`check.sh`, a lint
-  rule, a hook). Search for an open or closed issue with the same title first, and never file the
+  rule, a hook). Look in the list of issues for one, open or closed, with the same title first, and never file the
   same lesson twice. The founder adds `decided` to the ones to build.
 - One incident, one guard. When several incidents share a cause, file the one guard that stops all
   of them.
