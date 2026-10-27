@@ -1,0 +1,19 @@
+{
+  "name": "a row with no as_of",
+  "why": "Every fact carries the date it is true as of. A row without one would reach the page undated.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "figure": "5,410",
+          "lead": "Volume nobody can read.",
+          "claim": "Commits in under five months.",
+          "source": "Recorded 26 Oct 2026"
+        }
+      ]
+    }
+  }
+}

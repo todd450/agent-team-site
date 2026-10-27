@@ -1,0 +1,18 @@
+{
+  "name": "a link that is not a link to anywhere",
+  "why": "The target of a [text](url) carries no '://' when its scheme is javascript:, so a check that only looks for URLs would let it through and the generator would render it as an href.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "Read [the run](javascript:alert(1)) for the detail."
+        }
+      ]
+    }
+  }
+}

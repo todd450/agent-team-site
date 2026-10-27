@@ -1,0 +1,7 @@
+{
+  "name": "the key is refused",
+  "why": "The publishable key was rotated or revoked. The snapshot in the repo stays the one that was reviewed.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": { "costs": { "status": 401, "body": "{\"message\":\"Invalid API key\"}" } }
+}

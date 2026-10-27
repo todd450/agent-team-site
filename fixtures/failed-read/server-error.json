@@ -1,0 +1,7 @@
+{
+  "name": "a 500 from the API",
+  "why": "An error body is not rows; taking it as rows would empty a section of the page.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": { "record_entries": { "status": 500, "body": "{\"message\":\"internal server error\"}" } }
+}

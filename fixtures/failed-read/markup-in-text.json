@@ -1,0 +1,18 @@
+{
+  "name": "a tag outside backticks",
+  "why": "Text columns hold text. A row carrying markup outside backticks would put an element on the page that no reviewer wrote.",
+  "outcome": "fail",
+  "runs": 1,
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "a quoted <script> tag",
+          "entry": "A literal `<li>` in backticks is fine; the headline's tag is not."
+        }
+      ]
+    }
+  }
+}
