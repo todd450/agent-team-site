@@ -38,6 +38,10 @@ SNAPSHOT = ROOT / "content" / "facts.json"
 PULLER = ROOT / "scripts" / "pull-facts.js"
 SCHEMA_SQL = ROOT / "supabase" / "schema.sql"
 SEED_SQL = ROOT / "supabase" / "seed.sql"
+# Every change the live project has already had, oldest first.
+MIGRATIONS = ROOT / "supabase" / "migrations"
+# Every statement this repo would run on the project, wherever it lives.
+SUPABASE_SQL = sorted((ROOT / "supabase").glob("**/*.sql"))
 FAILED_READ = ROOT / "fixtures" / "failed-read"
 STUB_PULL = Path(__file__).resolve().parent / "stub_pull.js"
 
@@ -61,6 +65,7 @@ URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s)\]]+|(?<![\w/])//[^\s)\]]+"
 LINK_TARGET_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
 CODE_SPAN_RE = re.compile(r"`[^`]*`")
 STANDINGS = {"hit", "pending", "miss", ""}
+ADD_COLUMN_RE = re.compile(r"alter table (\w+) add column (\w+)")
 
 
 def markup_outside_backticks(value):
@@ -106,10 +111,17 @@ def costs_on_the_page(html):
     return costs
 
 
+# A comment or a string, whichever comes first: an apostrophe inside a comment
+# ("#27's tables") begins no string, and reading the file left to right is what
+# tells the two apart.
+SQL_COMMENT_OR_STRING_RE = re.compile(r"--[^\n]*|'((?:[^']|'')*)'")
+
+
 def sql_literals(block):
     """Every single-quoted string in a chunk of SQL, with '' unescaped."""
-    return [literal.replace("''", "'")
-            for literal in re.findall(r"'((?:[^']|'')*)'", block)]
+    return [match.group(1).replace("''", "'")
+            for match in SQL_COMMENT_OR_STRING_RE.finditer(block)
+            if match.group(1) is not None]
 
 
 def parse_iso_date(value):
@@ -224,11 +236,13 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
 
 
 class SchemaAndSeedTests(unittest.TestCase):
-    """The tables in Supabase and the seed that filled them, against the shape
-    the snapshot and the generator are written to. The seed is a starting
-    state, not a mirror of the tables as they are now -- a later pull may
-    carry facts it never had -- so what is checked here is that running it on
-    a fresh project gives tables this page's rules allow."""
+    """The tables in Supabase, the seed that filled them and the changes the
+    live project has had since, against the shape the snapshot and the
+    generator are written to. The seed is a starting state, not a mirror of
+    the tables as they are now -- a later pull may carry facts it never had --
+    so what is checked here is that running this folder on a fresh project
+    gives tables this page's rules allow, and that a column the live project
+    gained is one a fresh project would get too."""
 
     def setUp(self):
         self.schema = SCHEMA_SQL.read_text(encoding="utf-8")
@@ -264,17 +278,31 @@ class SchemaAndSeedTests(unittest.TestCase):
                 self.assertEqual(seeded, list(range(1, len(seeded) + 1)),
                                  f"{table} is seeded with a gap or a repeat in its positions")
 
-    def test_no_seeded_fact_carries_markup_or_a_link_off_this_site(self):
-        # The seed is the first thing in the tables, so a row the puller would
-        # refuse would make every pull fail from the start.
-        for table in KINDS:
-            _, values = self._seed_block(table)
-            for literal in sql_literals(values):
-                with self.subTest(table=table, value=literal[:40]):
+    def test_no_fact_this_repo_writes_into_the_tables_carries_markup_or_an_off_site_link(self):
+        # Every row this repo would put in the tables -- the seed's, and any a
+        # change in supabase/migrations wrote since -- has to be a row the
+        # puller would accept, or a pull fails from the start.
+        for path in sorted(SUPABASE_SQL):
+            for literal in sql_literals(path.read_text(encoding="utf-8")):
+                with self.subTest(file=path.name, value=literal[:40]):
                     self.assertEqual(markup_outside_backticks(literal), [],
-                                     f"a seeded fact could put markup on the page: {literal!r}")
+                                     f"a fact in {path.name} could put markup on the page: "
+                                     f"{literal!r}")
                     self.assertEqual(links_outside_allowlist(literal), [],
-                                     f"a seeded fact links off this site: {literal!r}")
+                                     f"a fact in {path.name} links off this site: {literal!r}")
+
+    def test_every_column_a_change_added_to_the_live_tables_is_in_the_schema(self):
+        # schema.sql is the shape a fresh project gets and migrations/ is what
+        # the live one has had done to it. A column added to the live tables
+        # and missing from schema.sql is a project built from this repo that
+        # cannot hold the facts the snapshot carries -- and the puller asking
+        # for a column that is not there is a pull that fails on its only job.
+        for path in sorted(MIGRATIONS.glob("*.sql")):
+            for table, column in ADD_COLUMN_RE.findall(path.read_text(encoding="utf-8")):
+                with self.subTest(file=path.name, column=f"{table}.{column}"):
+                    self.assertIn(column, self._schema_columns(table),
+                                  f"{path.name} added {table}.{column} to the live project, "
+                                  f"and schema.sql does not create it")
 
     def test_row_level_security_is_on_and_the_anon_role_may_only_read(self):
         self.assertIn("enable row level security", self.schema)

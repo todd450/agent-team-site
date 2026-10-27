@@ -47,7 +47,19 @@ REFUSED = [
     (f"{REPO_PREFIX}/\n../../evil/x", "github.com/evil/x, past a stripped newline"),
     (f"{REPO_PREFIX}/./evil", "github.com/todd450/founding-agents-site/evil, "
                               "which is inside the allowlist but is not the address written down"),
+    # A dot segment does not need a slash after it to do its work: the query or
+    # the fragment ends the path just as well, and so does the end of the
+    # address itself.
+    (f"{REPO_PREFIX}/..?q=1", "github.com/todd450/, on dots a query ends"),
+    (f"{REPO_PREFIX}/..#readme", "github.com/todd450/, on dots a fragment ends"),
+    (f"{REPO_PREFIX}/..", "github.com/todd450/, on dots the address ends"),
+    (f"{REPO_PREFIX}/..\n", "github.com/todd450/, on dots a stripped newline ends"),
+    (f"{REPO_PREFIX}/x/..?q=1", "github.com/todd450/founding-agents-site/, inside the allowlist "
+                                "but not the address written down"),
     (f"{PAGES_PREFIX}/../../evil/x", "todd450.github.io/evil/x, another site on the account"),
+    (f"{PAGES_PREFIX}/..?q=1", "todd450.github.io/, which answers 404"),
+    (f"{PAGES_PREFIX}/..#top", "todd450.github.io/, which answers 404"),
+    (f"{PAGES_PREFIX}/..\n", "todd450.github.io/, which answers 404"),
     (f"{REPO_PREFIX}-evil/pull/2", "a repository whose name merely starts with this one's"),
     (f"{REPO_PREFIX}@evil.example/x", "evil.example, with this repo's address as a username"),
     ("https://github.com/todd450/founding-agents", "the private plugin repo"),

@@ -12,6 +12,7 @@ so they cannot drift apart.
 """
 
 import re
+from urllib.parse import urljoin, urlsplit
 
 ALLOWED_LINK_PREFIXES = (
     "https://github.com/todd450/founding-agents-site",
@@ -31,6 +32,9 @@ PLAIN_URL_CHARS_RE = re.compile(r"^[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*$")
 # refused with them: nobody can say where it points.
 ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
 SEPARATOR_ESCAPE_RE = re.compile(r"%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])")
+# Where the path stops: a query or a fragment ends it, and so does the end of
+# the address. A dot segment needs no slash after it to walk up a level.
+PATH_ENDS_RE = re.compile(r"[?#]")
 
 
 def allowed_link(link):
@@ -51,9 +55,24 @@ def allowed_link(link):
         # query or fragment.
         if rest and rest[0] not in "/?#":
             continue
-        if not PLAIN_URL_CHARS_RE.match(rest):
+        # fullmatch, not match: Python's "$" also matches before a trailing
+        # newline, and a newline is a character a browser strips.
+        if not PLAIN_URL_CHARS_RE.fullmatch(rest):
             return False
         if SEPARATOR_ESCAPE_RE.search(rest) or "%" in ESCAPE_RE.sub("", rest):
             return False
-        return not any(segment in (".", "..") for segment in rest.split("/"))
+        path = PATH_ENDS_RE.split(rest, maxsplit=1)[0]
+        if any(segment in (".", "..") for segment in path.split("/")):
+            return False
+        # The URL parser has the last word on where the link lands: resolving
+        # the address against itself drops the query and the fragment and
+        # removes any dot segment, leaving the page a browser would open.
+        try:
+            parts = urlsplit(link)
+        except ValueError:
+            return False
+        if parts.scheme != "https":
+            return False
+        landing = urljoin(link, parts.path)
+        return landing == prefix or landing.startswith(prefix + "/")
     return False

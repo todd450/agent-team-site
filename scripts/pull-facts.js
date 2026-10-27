@@ -98,7 +98,11 @@ function isAllowedLink(link) {
     // resolves as "..".
     if (!PLAIN_URL_CHARS.test(rest)) return false;
     if (SEPARATOR_ESCAPE.test(rest) || rest.replace(ESCAPE, '').includes('%')) return false;
-    if (rest.split('/').some((segment) => segment === '.' || segment === '..')) return false;
+    // A dot segment needs no slash after it to walk up a level: a query, a
+    // fragment or the end of the address ends the path just as well, so the
+    // segments are read from the path alone.
+    const [pathOnly] = rest.split(/[?#]/, 1);
+    if (pathOnly.split('/').some((segment) => segment === '.' || segment === '..')) return false;
     // The browser's own parser has the last word on where the link lands.
     let resolved;
     try {
