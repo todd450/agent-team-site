@@ -71,6 +71,10 @@ const URL_IN_TEXT = /[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^\s)\]]+|(?<![\w/])\/\/[^\s)\]
 // What a [text](url) link points at, whatever its scheme: a target of
 // "javascript:..." or a relative path carries no "://" for URL_IN_TEXT.
 const LINK_TARGET = /\[[^\]]*\]\(([^)]*)\)/g;
+// A backslash before a bracket or a parenthesis: an escape a renderer
+// honours and this reader cannot see, so the two disagree about where a link
+// ends.
+const ESCAPED_BRACKET = /\\[[\]()]/;
 
 class PullError extends Error {}
 
@@ -117,6 +121,31 @@ function isAllowedLink(link) {
   return false;
 }
 
+// Where every link in this text points, and whether it also writes one this
+// reader could not read whole. The same reader as tests/links.py.
+//
+// A renderer reads more as a link than LINK_TARGET does. CommonMark says link
+// text may hold balanced brackets ("[see [this]](...)"), an image may be
+// wrapped in a link ("[![chart](ok.png)](...)"), and a bracket may be
+// backslash-escaped. In each of those this reader finds no target at all, or
+// only the inner one, so the destination a renderer would put in the href is
+// a destination nothing checked -- which is how a "javascript:" target walks
+// past an allowlist.
+//
+// So the reader accounts for every "](" the text contains: whatever is left
+// once the links it did read are taken out must hold none, and a
+// backslash-escaped bracket anywhere is a link it cannot see the end of.
+// When it cannot read one whole it says so, and the pull refuses the fact
+// rather than vouching for a link it never read.
+function linkTargets(text) {
+  const targets = [];
+  const residue = text.replace(LINK_TARGET, (span, target) => {
+    targets.push(target);
+    return ' '; // a space, so taking a link out can join no new "]("
+  });
+  return { targets, unreadable: residue.includes('](') || ESCAPED_BRACKET.test(text) };
+}
+
 function isRealDate(value) {
   if (typeof value !== 'string' || !ISO_DATE.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00Z`);
@@ -138,7 +167,11 @@ function checkText(where, value) {
       fail(`${where} carries ${bracket} outside backticks, which would put markup on the page`);
     }
   }
-  const targets = [...value.matchAll(LINK_TARGET)].map((match) => match[1]);
+  const { targets, unreadable } = linkTargets(value);
+  if (unreadable) {
+    fail(`${where} writes a link in a form this snapshot cannot read whole, `
+      + 'so where it points is a destination nothing has checked');
+  }
   for (const link of targets.concat(value.match(URL_IN_TEXT) || [])) {
     if (!isAllowedLink(link)) fail(`${where} links off this site: ${link}`);
   }
@@ -317,5 +350,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-  pull, isAllowedLink, KINDS, SNAPSHOT_PATH, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
+  pull, isAllowedLink, linkTargets, KINDS, SNAPSHOT_PATH, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
 };

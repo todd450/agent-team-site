@@ -1,15 +1,21 @@
-"""Tests for the rule that says where a link on this site may point.
+"""Tests for the two rules about a link on this site: where it may point, and
+how a fact's text is read to find it.
 
-The rule is written twice, because the two places that need it cannot share
+Both are written twice, because the two places that need them cannot share
 code: `scripts/pull-facts.js` is the gate on what enters the facts snapshot,
 and `tests/links.py` is what the suite checks index.html and the snapshot
 with. So the cases live here once and both copies answer all of them, and a
 hole opened in one is a failure here rather than a link on the page.
 
-What the cases pin: a link is judged by where a browser would land, not by
-what the string starts with. An address that begins with this repo's own and
-then walks out of it -- on `..`, on backslashes, on escaped dots, or on a tab
-a browser strips before it parses -- is a link off this site.
+What the cases pin:
+
+- A link is judged by where a browser would land, not by what the string
+  starts with. An address that begins with this repo's own and then walks out
+  of it -- on `..`, on backslashes, on escaped dots, or on a tab a browser
+  strips before it parses -- is a link off this site.
+- A reader that cannot read a link whole says so instead of finding nothing.
+  A renderer reads more as a link than the reader's pattern does, and every
+  such link is one whose destination no allowlist would ever see.
 """
 
 import json
@@ -18,7 +24,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from links import PAGES_PREFIX, REPO_PREFIX, allowed_link
+from links import PAGES_PREFIX, REPO_PREFIX, allowed_link, link_targets
 
 CHECK_LINKS_JS = Path(__file__).resolve().parent / "check_links.js"
 
@@ -71,6 +77,38 @@ REFUSED = [
     ("", "nowhere at all"),
 ]
 
+# A fact's text, and every link a reader has to find in it. These are texts
+# the reader can read whole, so what it finds is what a renderer would.
+# (text, targets)
+READABLE = [
+    ("Nothing here links anywhere.", []),
+    (f"Built in [PR #35]({REPO_PREFIX}/pull/35).", [f"{REPO_PREFIX}/pull/35"]),
+    (f"[the issue]({REPO_PREFIX}/issues/27) and [the site]({PAGES_PREFIX}/),",
+     [f"{REPO_PREFIX}/issues/27", f"{PAGES_PREFIX}/"]),
+    ("A bracketed aside [like this one] that links nowhere.", []),
+    ("An empty target [here]() points at the page itself.", [""]),
+    ("A link off this site [evil](https://evil.example/x) is still read whole.",
+     ["https://evil.example/x"]),
+]
+
+# A text that writes a link this reader cannot read whole. A renderer sees a
+# link in each of these; the reader sees no target, or only the inner one, so
+# the destination that would reach the href is one nothing checked. Each must
+# be reported as unreadable rather than quietly passing.
+# (text, what a renderer makes of it)
+UNREADABLE = [
+    ("[the writeup [part two]](javascript:alert(1))",
+     "a link to javascript:, since link text may hold balanced brackets"),
+    (f"[![chart]({REPO_PREFIX}/chart.png)](javascript:alert(1))",
+     "an image wrapped in a link to javascript:; only the image is read"),
+    (r"[the run \]log](javascript:alert(1))",
+     "a link to javascript:, past a backslash-escaped bracket"),
+    (f"Read [the run]({REPO_PREFIX}/pull/35), then [see [this]](javascript:alert(1)).",
+     "one link the reader does read, and one it does not"),
+    (f"[a]({REPO_PREFIX}/x)](javascript:alert(1))",
+     "a target left over once the link the reader did read is taken out"),
+]
+
 
 class LinkRuleTests(unittest.TestCase):
     """tests/links.py, the copy the suite checks the page and the snapshot
@@ -87,30 +125,58 @@ class LinkRuleTests(unittest.TestCase):
                 self.assertFalse(allowed_link(link), f"this link goes to {where}")
 
 
+class LinkReaderTests(unittest.TestCase):
+    """tests/links.py again: finding the links in a fact's text, and saying
+    so when a link cannot be read whole."""
+
+    def test_every_link_in_a_text_it_can_read_is_found(self):
+        for text, targets in READABLE:
+            with self.subTest(text=text):
+                self.assertEqual(link_targets(text), (targets, False))
+
+    def test_a_link_it_cannot_read_whole_is_reported_rather_than_missed(self):
+        for text, renders_as in UNREADABLE:
+            with self.subTest(text=text):
+                _, unreadable = link_targets(text)
+                self.assertTrue(unreadable, f"a renderer makes {renders_as} of this")
+
+
 class PullerAgreesTests(unittest.TestCase):
-    """scripts/pull-facts.js, the copy that decides what may enter the
-    snapshot. It must answer every case the same way."""
+    """scripts/pull-facts.js, the copies that decide what may enter the
+    snapshot. They must answer every case the same way."""
 
     @classmethod
     def setUpClass(cls):
         cls.node = shutil.which("node")
 
-    def verdicts(self, links):
+    def ask_the_puller(self, links=(), texts=()):
         self.assertIsNotNone(self.node, "node is needed to run the puller's copy of the rule")
         result = subprocess.run(
-            [self.node, str(CHECK_LINKS_JS)], input=json.dumps(links),
+            [self.node, str(CHECK_LINKS_JS)],
+            input=json.dumps({"links": list(links), "texts": list(texts)}),
             capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
 
     def test_the_puller_answers_every_case_the_same_way(self):
         cases = [(link, True) for link, _ in ALLOWED] + [(link, False) for link, _ in REFUSED]
-        verdicts = self.verdicts([link for link, _ in cases])
+        verdicts = self.ask_the_puller(links=[link for link, _ in cases])["links"]
         self.assertEqual(len(verdicts), len(cases))
         for (link, expected), answer in zip(cases, verdicts):
             with self.subTest(link=link):
                 self.assertEqual(answer, expected,
                                  "the puller's copy of the link rule and tests/links.py disagree")
+
+    def test_the_puller_reads_every_text_the_same_way(self):
+        texts = [text for text, _ in READABLE] + [text for text, _ in UNREADABLE]
+        answers = self.ask_the_puller(texts=texts)["texts"]
+        self.assertEqual(len(answers), len(texts))
+        for text, answer in zip(texts, answers):
+            with self.subTest(text=text):
+                targets, unreadable = link_targets(text)
+                self.assertEqual([answer["targets"], answer["unreadable"]],
+                                 [targets, unreadable],
+                                 "the puller's link reader and tests/links.py disagree")
 
 
 if __name__ == "__main__":

@@ -27,10 +27,11 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-# The one Python copy of "where a link may point", shared with the page's own
-# link tests in tests/test_shell.py and checked against the puller's copy in
+# The one Python copy of "where a link may point" and of the reader that
+# finds the links in a fact's text, shared with the page's own link tests in
+# tests/test_shell.py and checked against the puller's copies in
 # tests/test_links.py.
-from links import allowed_link
+from links import allowed_link, link_targets
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
@@ -60,9 +61,6 @@ KINDS = {
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s)\]]+|(?<![\w/])//[^\s)\]]+")
-# What a [text](url) link points at, whatever its scheme: a target of
-# "javascript:..." or a relative path carries no "://" for URL_RE to find.
-LINK_TARGET_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
 CODE_SPAN_RE = re.compile(r"`[^`]*`")
 STANDINGS = {"hit", "pending", "miss", ""}
 ADD_COLUMN_RE = re.compile(r"alter table (\w+) add column (\w+)")
@@ -79,11 +77,17 @@ def markup_outside_backticks(value):
     return [bracket for bracket in ("<", ">") if bracket in outside]
 
 
-def links_outside_allowlist(value):
-    """Everything in this text that would reach the page as a link: what each
-    [text](url) points at, and any bare URL alongside them."""
-    targets = LINK_TARGET_RE.findall(value) + URL_RE.findall(value)
-    return [target for target in targets if not allowed_link(target)]
+def unchecked_links(value):
+    """Every link in this text that nothing can vouch for: what each
+    [text](url) points at and any bare URL alongside them, when it lands off
+    this site -- and the text itself when it writes a link the reader cannot
+    read whole, because then the destination a renderer would use is one no
+    allowlist ever saw."""
+    targets, unreadable = link_targets(value)
+    outside = [target for target in targets + URL_RE.findall(value)
+               if not allowed_link(target)]
+    return (["a link written in a form the reader cannot read whole"]
+            if unreadable else []) + outside
 
 
 EV_BLOCK_RE = re.compile(r'<div class="ev">(.*?)</div>', re.DOTALL)
@@ -186,8 +190,9 @@ class SnapshotRulesMixin:
                 for column in columns[2:]:
                     with self.subTest(kind=kind, position=row["position"], column=column):
                         self.assertEqual(
-                            links_outside_allowlist(row[column]), [],
-                            f"{kind}.{column} links off this site: {row[column]!r}")
+                            unchecked_links(row[column]), [],
+                            f"{kind}.{column} carries a link nothing can vouch for: "
+                            f"{row[column]!r}")
 
 
 class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
@@ -288,8 +293,9 @@ class SchemaAndSeedTests(unittest.TestCase):
                     self.assertEqual(markup_outside_backticks(literal), [],
                                      f"a fact in {path.name} could put markup on the page: "
                                      f"{literal!r}")
-                    self.assertEqual(links_outside_allowlist(literal), [],
-                                     f"a fact in {path.name} links off this site: {literal!r}")
+                    self.assertEqual(unchecked_links(literal), [],
+                                     f"a fact in {path.name} carries a link nothing can "
+                                     f"vouch for: {literal!r}")
 
     def test_every_column_a_change_added_to_the_live_tables_is_in_the_schema(self):
         # schema.sql is the shape a fresh project gets and migrations/ is what
