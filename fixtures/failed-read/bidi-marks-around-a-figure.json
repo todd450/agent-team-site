@@ -1,0 +1,21 @@
+{
+  "name": "a measure whose bar is 3-5 between two hidden marks",
+  "why": "Two arabic letter marks around \"3-5\" display it as \"5-3\": the snapshot says the bar is 3-5 and the page says the opposite, every check is green, and `git diff` shows the reviewer `\"bar\": \"3-5\"` and neither mark. The whole safety argument for a committed snapshot is that a human reads the diff, so a character that cannot be read in one is refused (decided on #27, 28 Oct 2026).",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "measures[0].bar carries U+061C",
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "`build` ran to merge on real site issues",
+          "bar": "؜3-5؜",
+          "current": "4",
+          "standing": "hit"
+        }
+      ]
+    }
+  }
+}

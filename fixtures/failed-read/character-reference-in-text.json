@@ -1,0 +1,19 @@
+{
+  "name": "a tag spelled as character references",
+  "why": "A renderer decodes '&#60;' and '&#62;' into '<' and '>' before anything reads the text, so this reaches the page as a real element while a reader looking for the literal brackets finds none.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "character reference",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "A flag &#60;img src=x onerror=alert(1)&#62; here."
+        }
+      ]
+    }
+  }
+}

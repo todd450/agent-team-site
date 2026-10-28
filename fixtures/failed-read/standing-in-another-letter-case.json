@@ -1,0 +1,21 @@
+{
+  "name": "a standing spelled with a capital",
+  "why": "The same list, in another letter case: \"Hit\" is not \"hit\". The generator will match the word the list names, so a capital would reach the page as a measure the renderer cannot judge -- and the snapshot test refuses it as surely as a word off the list.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "measures[0].standing is not one of hit, pending, miss",
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "Merges not made by the integrator",
+          "bar": "0",
+          "current": "0",
+          "standing": "Hit"
+        }
+      ]
+    }
+  }
+}

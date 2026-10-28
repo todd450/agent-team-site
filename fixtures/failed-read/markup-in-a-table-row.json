@@ -1,0 +1,19 @@
+{
+  "name": "markup inside backticks in what a renderer reads as a table",
+  "why": "A GFM table splits a row into cells before any inline is read, so the backticks on the first line never pair and the tag between them is a real element. Every line's backticks pair within that line, so a rule that reasons line by line finds nothing wrong at all.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "carries a line break",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "h | `x|<img src=a onerror=alert(1)>`\n--- | --- | ---\na | b | c"
+        }
+      ]
+    }
+  }
+}

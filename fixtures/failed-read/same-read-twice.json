@@ -1,0 +1,7 @@
+{
+  "name": "the same read twice",
+  "why": "Two pulls over rows nobody changed must leave the same bytes, so a pull with nothing new in it produces an empty diff and is not a change to review.",
+  "outcome": "ok",
+  "runs": 2,
+  "responses": {}
+}

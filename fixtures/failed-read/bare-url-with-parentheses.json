@@ -1,0 +1,19 @@
+{
+  "name": "a bare address holding a balanced pair of parentheses",
+  "why": "The same walk out of the allowlist written without a link's brackets. A renderer autolinks the whole address and lands on github.com/attacker/evil, while a reader of bare addresses stops at the first ')' and leaves an allowed prefix behind. A fact writes a link as [text](url) and nothing else, so a bare address is refused rather than read.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "See https://github.com/todd450/founding-agents-site/a(b)/../../attacker/evil for detail."
+        }
+      ]
+    }
+  }
+}

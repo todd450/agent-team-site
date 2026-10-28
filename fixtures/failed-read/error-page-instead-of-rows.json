@@ -1,0 +1,13 @@
+{
+  "name": "an error page from in front of the store",
+  "why": "A proxy between the pull and the store answers for it, in HTML rather than JSON. There is no message field to lift, and what the page says is still the only clue the person running the refresh gets. Its line breaks and its terminal escapes (\\u001b[31m here) have no business in a one-line reason, so the reason carries the words and not the control characters.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "Bad gateway",
+  "responses": {
+    "measures": {
+      "status": 502,
+      "body": "<html>\n  <head><title>502 Bad gateway</title></head>\n  <body>\u001b[31mBad gateway\u001b[0m</body>\n</html>\n"
+    }
+  }
+}

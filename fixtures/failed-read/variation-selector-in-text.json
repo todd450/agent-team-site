@@ -1,0 +1,19 @@
+{
+  "name": "a record entry whose headline carries a variation selector",
+  "why": "A variation selector is a mark, which is a category a fact may carry, and it is invisible by default: it shows a reader nothing and changes how the character before it is drawn. It is the character the category list alone would let through, and the reason the rule refuses anything Unicode calls default-ignorable as well (decided on #27, 28 Oct 2026).",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "record_entries[0].headline carries U+FE0F",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "the order bent️",
+          "entry": "The brief was played by hand before `propose` existed as a run."
+        }
+      ]
+    }
+  }
+}

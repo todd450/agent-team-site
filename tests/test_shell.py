@@ -28,13 +28,14 @@ import unittest
 from html.parser import HTMLParser
 from pathlib import Path
 
+# "Where a link may point", asked of the one place it is written down:
+# scripts/pull-facts.js, through tests/rules.py. The page and the facts
+# snapshot are held to the same allowlist, by the same code.
+from rules import PAGES_PREFIX, REPO_PREFIX, allowed_links
+
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
 TOKENS_CSS = ROOT / "tokens.css"
-
-REPO_PREFIX = "https://github.com/todd450/founding-agents-site"
-PAGES_PREFIX = "https://todd450.github.io/founding-agents-site"
-ALLOWED_LINK_PREFIXES = (REPO_PREFIX, PAGES_PREFIX)
 
 LINK_ATTRS = {"a": "href", "link": "href", "img": "src", "script": "src", "source": "src",
               "iframe": "src"}
@@ -145,32 +146,22 @@ class LinksAllowedTests(unittest.TestCase):
     def setUp(self):
         self.page = parse(read(INDEX_HTML))
 
-    @staticmethod
-    def _matches_allowed_prefix(link):
-        # A prefix match is only real if the next character is a path,
-        # query or fragment separator (or the link ends there) -- otherwise
-        # "...founding-agents-site" also matches the unrelated, non-existent
-        # "...founding-agents-site-evil".
-        for prefix in ALLOWED_LINK_PREFIXES:
-            if not link.startswith(prefix):
-                continue
-            rest = link[len(prefix):]
-            if rest == "" or rest[0] in "/?#":
-                return True
-        return False
-
     def test_every_link_is_relative_or_to_this_repo_or_its_pages_site(self):
         self.assertTrue(self.page.links, "expected at least one link on the page")
+        # The absolute ones go to the puller's allowlist in one call: it asks
+        # where a browser would land, so an address that begins with this
+        # repo's own and then walks out of it on a ".." segment is not inside
+        # it.
+        absolute = [link for link in self.page.links if link.startswith(("http://", "https://"))]
+        allowed = dict(zip(absolute, allowed_links(absolute)))
         for link in self.page.links:
             if link.startswith("//"):
                 self.fail(f"protocol-relative link leaves this site: {link!r}")
             if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", link) and not link.startswith(("http://", "https://")):
                 self.fail(f"link uses a disallowed scheme: {link!r}")
-            if link.startswith(("http://", "https://")):
-                self.assertTrue(
-                    self._matches_allowed_prefix(link),
-                    f"link leaves this repo's public pages: {link!r}",
-                )
+            if link in allowed:
+                self.assertTrue(allowed[link],
+                                f"link leaves this repo's public pages: {link!r}")
             else:
                 # A relative link must stay inside this site: no "../"
                 # escape, and no leading "/" either -- this site is served
@@ -199,13 +190,13 @@ class LinksAllowedTests(unittest.TestCase):
                                  f"the page links {path!r}, which is not in this repo: a 404 on "
                                  f"the nightly check opens a red issue and freezes every merge")
 
-    # No separate "not the private plugin repo" test: the allowlist above
-    # already requires every absolute link to match one of
-    # ALLOWED_LINK_PREFIXES exactly, with a boundary check on the character
-    # that follows, so a link into the private repo (todd450/founding-agents,
-    # without "-site") can never pass it. A standalone substring check for
-    # "founding-agents" would now be a false positive on this repo's own,
-    # legitimate address -- founding-agents-site contains that substring.
+    # No separate "not the private plugin repo" test: the allowlist already
+    # requires every absolute link to match one of its two prefixes exactly,
+    # with a boundary check on the character that follows, so a link into the
+    # private repo (todd450/founding-agents, without "-site") can never pass
+    # it. A standalone substring check for "founding-agents" would now be a
+    # false positive on this repo's own, legitimate address --
+    # founding-agents-site contains that substring.
 
 
 STYLE_BLOCK_RE = re.compile(r"<style[^>]*>(.*?)</style>", re.DOTALL)

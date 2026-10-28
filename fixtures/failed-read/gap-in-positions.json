@@ -1,0 +1,27 @@
+{
+  "name": "a gap in the positions",
+  "why": "Positions 1 and 3 came back, so a row is missing and the page's order has a hole in it.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "positions are not 1..n",
+  "responses": {
+    "status_steps": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-24",
+          "name": "main requires a pull request",
+          "state": "Done",
+          "detail": "No link: repository settings are not public."
+        },
+        {
+          "position": 3,
+          "as_of": "2026-10-25",
+          "name": "Ops watch checks the site nightly",
+          "state": "Done",
+          "detail": "First run green."
+        }
+      ]
+    }
+  }
+}

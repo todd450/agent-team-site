@@ -1,0 +1,13 @@
+{
+  "name": "a 400 for a column that is not there",
+  "why": "A column was renamed or dropped in the dashboard, so the read asks the store for one the table no longer has. The store answers 400 and says which column; a refusal that gave the status number alone would leave whoever runs the refresh nothing to act on, and this is the only moment anyone is told.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "column costs.owner does not exist",
+  "responses": {
+    "costs": {
+      "status": 400,
+      "body": "{\"code\":\"42703\",\"message\":\"column costs.owner does not exist\",\"hint\":null}"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "fewer rows than the count promises",
+  "why": "The answer parses and looks like rows, but the content-range header says there are more. A short read is a failed read.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "rows came back of 2",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "the date-order test had a blind spot",
+          "entry": "Fixed in [PR #11](https://github.com/todd450/founding-agents-site/pull/11)."
+        }
+      ],
+      "count": 2
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "a link whose dots are percent-escaped",
+  "why": "%2e is a dot once a browser decodes it, so this resolves to https://github.com/evil with no literal '..' anywhere in the text for a check to spot.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "links off this site",
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "figure": "5,410",
+          "unit": null,
+          "lead": "Volume nobody can read.",
+          "claim": "Commits in under five months.",
+          "source": "Counted in [the record](https://github.com/todd450/founding-agents-site/%2e%2e/%2e%2e/evil)"
+        }
+      ]
+    }
+  }
+}

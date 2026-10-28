@@ -1,0 +1,19 @@
+{
+  "name": "markup between two backticks a carriage return apart",
+  "why": "A CommonMark line ending is a carriage return as much as a newline, so two lone '\\r' characters end the paragraph exactly as a blank line does: neither backtick is paired and the tag between them is a real element. A reader that spells the rule '\\n' alone pairs them and calls the text safe.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "carries a line break",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "The flag `x\r\r<img src=x onerror=alert(1)>` is set."
+        }
+      ]
+    }
+  }
+}

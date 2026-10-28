@@ -1,0 +1,22 @@
+{
+  "name": "a link whose text escapes a bracket",
+  "why": "A backslash before a bracket is an escape a renderer honours and the snapshot's reader cannot see, so the two disagree about where the link text ends and the reader finds no target to check. An escaped bracket is a backslash, and a backslash is refused wherever it appears in a fact's text, so that is the rule this fails on; the escape is pinned against the link reader directly in tests/test_rules.py.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "carries a backslash",
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "figure": "61,365",
+          "unit": "lines, in 8 days",
+          "lead": "written",
+          "claim": "Counted in [the run \\]log](javascript:alert(1)).",
+          "source": "https://github.com/todd450/founding-agents-site/pull/11"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "a measure whose label is made of zero-width characters",
+  "why": "A value of characters with no width and no glyph is not empty and not whitespace, so it passes for a value while showing a reader nothing at all: a measure with no visible label reaches the reviewed snapshot and nothing downstream notices. A zero-width character is outside the characters a fact may carry (decided on #27, 28 Oct 2026).",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "measures[0].label carries U+200B",
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "\u200b\u200d\ufeff",
+          "bar": "0",
+          "current": "0",
+          "standing": "hit"
+        }
+      ]
+    }
+  }
+}

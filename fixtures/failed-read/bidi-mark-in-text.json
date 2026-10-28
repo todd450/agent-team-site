@@ -1,0 +1,20 @@
+{
+  "name": "a step whose detail carries a bidirectional mark",
+  "why": "A bidirectional mark has no width of its own and reorders the neutral text that follows it, so a fact can read on the page as one claim and be stored in the snapshot as another -- the same harm as a direction override, under another Unicode heading. It is outside the characters a fact may carry: letters, marks, numbers, punctuation, symbols and ordinary spaces, and nothing invisible by default (decided on #27, 28 Oct 2026).",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "status_steps[0].detail carries U+200F",
+  "responses": {
+    "status_steps": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-24",
+          "name": "main requires a pull request",
+          "state": "Done",
+          "detail": "Four runs have merged: ‏4 of 3-5 done."
+        }
+      ]
+    }
+  }
+}

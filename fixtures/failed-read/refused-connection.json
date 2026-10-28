@@ -1,0 +1,8 @@
+{
+  "name": "the connection is refused",
+  "why": "The Supabase project is paused, or the runner has no network. The build must stop, not pull a blank page together.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "the read did not come back",
+  "responses": { "costs": { "refused": true } }
+}

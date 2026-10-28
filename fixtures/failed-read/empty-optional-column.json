@@ -1,0 +1,33 @@
+{
+  "name": "an optional column that is deliberately empty",
+  "why": "The other side of the blank rule: unit and standing are the two columns a fact may leave empty, and the empty string is what they hold when it does -- a cost whose figure stands alone, a measure with no bar to be judged against. Spelled '' rather than null, which is how the puller itself writes them, this read must still succeed.",
+  "outcome": "ok",
+  "runs": 1,
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "figure": "5,410",
+          "unit": "",
+          "lead": "Volume nobody can read.",
+          "claim": "Commits in under five months.",
+          "source": "Recorded 26 Oct 2026"
+        }
+      ]
+    },
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "Stars, traffic, installs",
+          "bar": "not a measure",
+          "current": "—",
+          "standing": ""
+        }
+      ]
+    }
+  }
+}

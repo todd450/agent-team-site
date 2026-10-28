@@ -1,0 +1,21 @@
+{
+  "name": "a bare host whose last character before the dot is a symbol",
+  "why": "The same autolink in ASCII. A renderer reads a host character as anything that is not punctuation or a space, so a symbol before the dot makes a host as surely as a letter does, and this fact reaches the page as href=\"http://1c$.sh\". The rule is the shape of a host, not the letters it is spelled in.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "Build cost",
+          "bar": "Under 1c$.sh a run",
+          "current": "Measured on 26 Oct 2026",
+          "standing": "pending"
+        }
+      ]
+    }
+  }
+}

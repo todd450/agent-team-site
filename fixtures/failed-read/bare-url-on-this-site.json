@@ -1,0 +1,19 @@
+{
+  "name": "a bare address that does land on this site",
+  "why": "Where it lands is inside the allowlist, and it is still not the one form a fact writes a link in. Reading a bare address at all is what let the other spellings through, so the form is refused rather than the spellings chased.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "See https://github.com/todd450/founding-agents-site/pull/35 for detail."
+        }
+      ]
+    }
+  }
+}

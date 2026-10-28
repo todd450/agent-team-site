@@ -1,0 +1,21 @@
+{
+  "name": "a standing that is not one of the three words",
+  "why": "measures.standing is one of a short list: hit, pending or miss, or empty when a measure has no bar to be judged against. The tables say so (schema.sql) and the page's own test says so, so a value outside the list written into the snapshot leaves the repo red and has to be hand-edited before it can ship.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "measures[0].standing is not one of hit, pending, miss",
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "Merges not made by the integrator",
+          "bar": "0",
+          "current": "0",
+          "standing": "shipped"
+        }
+      ]
+    }
+  }
+}

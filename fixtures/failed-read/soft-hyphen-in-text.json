@@ -1,0 +1,22 @@
+{
+  "name": "a cost whose unit carries a soft hyphen",
+  "why": "A soft hyphen draws nothing unless the line happens to break on it, so a required value can be made of them and show a reader nothing while passing for a value -- and in the middle of a word it splits what the page shows from what the snapshot says. Outside the characters a fact may carry (decided on #27, 28 Oct 2026).",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "costs[0].unit carries U+00AD",
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "figure": "61,365",
+          "unit": "lines, in 8 ­days",
+          "lead": "Work undone as fast as it was done.",
+          "claim": "Thirty-two removal commits deleting what had just been written.",
+          "source": "Recorded 26 Oct 2026"
+        }
+      ]
+    }
+  }
+}

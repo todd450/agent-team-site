@@ -1,0 +1,19 @@
+{
+  "name": "a link whose target holds a balanced pair of parentheses",
+  "why": "CommonMark says a link destination may hold parentheses when they are balanced, so a renderer reads this whole address and lands on github.com/attacker/evil. The snapshot's reader stops at the first ')' and judges only 'https://github.com/todd450/founding-agents-site/a(b', which is inside the allowlist: a reader that cannot see where a link ends must refuse the fact, not vouch for a prefix of it.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "Read [the plan](https://github.com/todd450/founding-agents-site/a(b)/../../attacker/evil) first."
+        }
+      ]
+    }
+  }
+}
