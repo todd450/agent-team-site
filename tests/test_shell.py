@@ -1,12 +1,14 @@
-"""Tests for the page shell: index.html and tokens.css.
+"""Tests for the page shell: the pages this site serves, and tokens.css.
 
 What is left here is only what no standard tool checks -- this site's own
 rules:
 
-- Every link on the page goes only to this repo's public files, issues and
-  PRs, or to the site's own address (never into the private plugin repo or
-  anywhere else, and never a root-relative path that leaves the project
-  site's subdirectory on GitHub Pages).
+- Every link on every page the site serves goes only to this repo's public
+  files, issues and PRs, or to the site's own address (never into the private
+  plugin repo or anywhere else, and never a root-relative path that leaves
+  the project site's subdirectory on GitHub Pages). Which pages those are is
+  the generator's answer, not a filename written here (tests/pages.py), so a
+  page added later is held to the allowlist without this file being touched.
 - A link into a file in this repo points at a file that is actually there to
   be served: a 404 opens a `red` issue and freezes every merge.
 - The page is built from the six sections the brief names, none of them a
@@ -31,33 +33,28 @@ from pathlib import Path
 # "Where a link may point", asked of the one place it is written down:
 # scripts/pull-facts.js, through tests/rules.py. The page and the facts
 # snapshot are held to the same allowlist, by the same code.
-from rules import PAGES_PREFIX, REPO_PREFIX, allowed_links
+from rules import PAGES_PREFIX, REPO_PREFIX
+# The pages the site serves, and that one allowlist asked about the addresses
+# on them.
+from pages import link_problems, links_on, served_pages
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
 TOKENS_CSS = ROOT / "tokens.css"
 
-LINK_ATTRS = {"a": "href", "link": "href", "img": "src", "script": "src", "source": "src",
-              "iframe": "src"}
-
 SECTION_CLASSES = ["band", "costs", "flow", "limits", "measures", "record"]
 
 
 class PageParser(HTMLParser):
-    """Collects the tags, attributes and links on the page. Nothing here
-    checks that the markup is well formed -- html-validate does that."""
+    """Collects the tags and attributes on the page. Nothing here checks that
+    the markup is well formed -- html-validate does that."""
 
     def __init__(self):
         super().__init__()
         self.tags = []  # (tag, attrs dict) in document order
-        self.links = []  # every href/src found on the page
 
     def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        self.tags.append((tag, attrs))
-        value = attrs.get(LINK_ATTRS.get(tag, ""))
-        if value:
-            self.links.append(value.strip())
+        self.tags.append((tag, dict(attrs)))
 
 
 def parse(html):
@@ -143,51 +140,37 @@ class PageShapeTests(unittest.TestCase):
 
 
 class LinksAllowedTests(unittest.TestCase):
+    """Asked of every page the site serves. The rule itself is in
+    tests/pages.py, so the case for a page that does not exist yet
+    (tests/test_generate.py) asks exactly this question of it."""
+
     def setUp(self):
-        self.page = parse(read(INDEX_HTML))
+        self.pages = {name: read(ROOT / name) for name in served_pages()}
+        self.assertTrue(self.pages, "the generator names no page the site serves")
 
     def test_every_link_is_relative_or_to_this_repo_or_its_pages_site(self):
-        self.assertTrue(self.page.links, "expected at least one link on the page")
-        # The absolute ones go to the puller's allowlist in one call: it asks
-        # where a browser would land, so an address that begins with this
-        # repo's own and then walks out of it on a ".." segment is not inside
-        # it.
-        absolute = [link for link in self.page.links if link.startswith(("http://", "https://"))]
-        allowed = dict(zip(absolute, allowed_links(absolute)))
-        for link in self.page.links:
-            if link.startswith("//"):
-                self.fail(f"protocol-relative link leaves this site: {link!r}")
-            if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", link) and not link.startswith(("http://", "https://")):
-                self.fail(f"link uses a disallowed scheme: {link!r}")
-            if link in allowed:
-                self.assertTrue(allowed[link],
-                                f"link leaves this repo's public pages: {link!r}")
-            else:
-                # A relative link must stay inside this site: no "../"
-                # escape, and no leading "/" either -- this site is served
-                # from a project subdirectory on GitHub Pages
-                # (todd450.github.io/founding-agents-site/), so a
-                # root-relative link such as "/about" resolves to
-                # todd450.github.io/about, outside the site entirely, and
-                # 404s on the nightly link check.
-                self.assertFalse(link.startswith(".."), f"relative link escapes the site: {link!r}")
-                self.assertFalse(link.startswith("/"),
-                                  f"root-relative link leaves the project site: {link!r}")
+        for name, html in self.pages.items():
+            with self.subTest(page=name):
+                links = links_on(html)
+                self.assertTrue(links, f"expected at least one link on {name}")
+                self.assertEqual(link_problems(links), [],
+                                 f"{name} carries a link this site may not carry")
 
-    def test_every_file_this_page_links_in_this_repo_exists(self):
+    def test_every_file_each_page_links_in_this_repo_exists(self):
         # Links to an issue or a PR are checked live by ops watch every
         # night. A link to a file in this repo is the one kind this suite can
         # check offline, and the one most likely to rot: check_site.py is
         # copied in by the plugin's setup skill and can move without anyone
         # touching this page.
         blob_prefix = f"{REPO_PREFIX}/blob/main/"
-        paths = [link[len(blob_prefix):].split("#")[0].split("?")[0]
-                 for link in self.page.links if link.startswith(blob_prefix)]
-        self.assertTrue(paths, "expected the page to link at least one file in this repo")
-        for path in paths:
+        paths = {link[len(blob_prefix):].split("#")[0].split("?")[0]: name
+                 for name, html in self.pages.items() for link in links_on(html)
+                 if link.startswith(blob_prefix)}
+        self.assertTrue(paths, "expected the site to link at least one file in this repo")
+        for path, name in paths.items():
             with self.subTest(path=path):
                 self.assertTrue((ROOT / path).is_file(),
-                                 f"the page links {path!r}, which is not in this repo: a 404 on "
+                                 f"{name} links {path!r}, which is not in this repo: a 404 on "
                                  f"the nightly check opens a red issue and freezes every merge")
 
     # No separate "not the private plugin repo" test: the allowlist already

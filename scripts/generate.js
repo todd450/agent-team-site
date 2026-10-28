@@ -337,7 +337,7 @@ function render(template, scope, where) {
 // measure's standing is the class its figure is coloured by; and the newest
 // record entry is the build the reader is looking at, so the mark is written
 // on it and nowhere else -- the page cannot carry two of them.
-function rowsOf(snapshot, kind, where, mark) {
+function rowsOf(snapshot, kind, where, mark, reserved = []) {
   const rows = snapshot[kind];
   if (!Array.isArray(rows)) {
     fail(`${where} asks for {{#each ${kind}}}, and the snapshot holds no such kind of fact. `
@@ -349,6 +349,16 @@ function rowsOf(snapshot, kind, where, mark) {
     }
     if (!Number.isInteger(row.position) || row.position < 1) {
       fail(`${kind}[${index}] has no position: ${JSON.stringify(row.position)}`);
+    }
+    // A row's columns are the values in scope wherever it is rendered, so a
+    // column named after one of the generator's own values would stand in for
+    // it inside that block -- the site's address, say, becoming whatever the
+    // store holds. The row's own facts are the row's to write; these are not.
+    for (const column of Object.keys(row)) {
+      if (reserved.includes(column)) {
+        fail(`${kind}[${index}] has a column named ${column}, which is a value the generator `
+          + 'works out for the whole page: a row may not stand in for it');
+      }
     }
   });
   const ordered = [...rows].sort((a, b) => a.position - b.position);
@@ -402,6 +412,21 @@ function build(options = {}) {
     if (typeof site[field] !== 'string' || site[field].trim() === '') {
       fail(`content/site.json has no ${field}`);
     }
+  }
+  // The address is linked in every page's footer, so the build is where it is
+  // held to being an address a browser follows securely rather than any
+  // non-empty string: a scheme that runs, or a word that is no address at all,
+  // would otherwise reach the page as an href. #30 is the issue that moves
+  // this value.
+  let scheme = null;
+  try {
+    scheme = new URL(site.address).protocol;
+  } catch {
+    scheme = null;
+  }
+  if (scheme !== 'https:') {
+    fail('content/site.json: the address is linked on every page, so it is an absolute https '
+      + `address, and this is ${JSON.stringify(site.address)}`);
   }
   const snapshot = readJson(snapshotPath);
   if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
@@ -487,7 +512,8 @@ function build(options = {}) {
       values: { ...siteValues, ...dates },
       copy,
       copyFiles,
-      rows: (kind, at) => rowsOf(snapshot, kind, at, copy['record.thisBuild']),
+      rows: (kind, at) => rowsOf(snapshot, kind, at, copy['record.thisBuild'],
+        [...Object.keys(siteValues), ...Object.keys(dates)]),
     };
     const html = render(template, scope, where);
 

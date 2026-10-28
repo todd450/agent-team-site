@@ -52,6 +52,10 @@ from pathlib import Path
 # generator is written against. Asked through node, so this file holds no
 # second copy of it (tests/rules.py).
 from rules import kinds, links_in
+# The pages this site serves and the rules every one of them keeps, so the
+# case for a second page asks the same questions of it as the suite asks of
+# the committed page (tests/pages.py).
+from pages import link_problems, links_on, served_from, served_pages
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERATE_JS = ROOT / "scripts" / "generate.js"
@@ -62,6 +66,7 @@ TEMPLATES = ROOT / "templates"
 SNAPSHOT = CONTENT / "facts.json"
 SITE_JSON = CONTENT / "site.json"
 INDEX_HTML = ROOT / "index.html"
+VERCEL_JSON = ROOT / "vercel.json"
 EMPTY_AND_ONE = ROOT / "fixtures" / "empty-and-one"
 
 NODE = shutil.which("node")
@@ -317,6 +322,36 @@ class CommittedPageTests(GeneratorTestCase):
                          "standard library and nothing else")
 
 
+class DeployedOutputTests(GeneratorTestCase):
+    """The deploy serves the directory the build writes the pages into.
+
+    A repo with no build script is uploaded as it stands; one with a build
+    script is built and then served from an output directory, which defaults
+    to `public/` -- a directory this site does not have and will not have,
+    because the pages are committed at the repo root (P4, decided on #14).
+    So the repo pins the output directory itself, rather than leaving it to a
+    dashboard nobody reviews (decided by the founder on #28).
+    """
+
+    def test_the_deploy_serves_the_directory_the_build_writes_the_pages_into(self):
+        self.assertIn("build", load(PACKAGE_JSON)["scripts"],
+                      "this case is about what a build script does to the deploy")
+        self.assertTrue(VERCEL_JSON.is_file(),
+                        "package.json declares a build script, so the deploy builds the repo and "
+                        "then serves one directory: vercel.json is where this repo says which, "
+                        "and there is no vercel.json")
+        output = load(VERCEL_JSON).get("outputDirectory")
+        self.assertIsNotNone(output, "vercel.json does not say which directory the deploy serves")
+        served = (ROOT / output).resolve()
+        self.assertEqual(served, ROOT.resolve(),
+                         f"the pages are committed at the repo root, and the deploy serves "
+                         f"{output!r}")
+        for name in self.build(root=ROOT):
+            with self.subTest(page=name):
+                self.assertTrue((served / name).is_file(),
+                                f"the deploy serves {output!r}, which does not hold {name}")
+
+
 class OutputPathTests(GeneratorTestCase):
     """Every template in templates/pages/ is written to its matching output
     path, so a page added later costs a template and not a generator change."""
@@ -343,6 +378,63 @@ class OutputPathTests(GeneratorTestCase):
         (root / "templates" / "pages" / "extra.html").write_text(
             '  <section class="extra"><h2>{{extra.heading}}</h2></section>\n', encoding="utf-8")
         self.refuse(root, "extra")
+
+
+class EveryServedPageTests(GeneratorTestCase):
+    """Every page a build writes is held to this site's page rules, not just
+    the one page there is today.
+
+    The convention this issue sets up is that a later page costs a template
+    and a copy file. A check that reads `index.html` by name would let the
+    first page added after it carry a link nothing ever looked at -- a scheme
+    that runs in this site's origin, or an address off this site -- because
+    the committed page is, truthfully, the generated page.
+    """
+
+    def site_with_a_second_page(self, body):
+        """A copy of this repo's sources with an extra page whose wording is
+        `body`, built where the generator puts it."""
+        root = self.sources()
+        (root / "templates" / "pages" / "extra.html").write_text(
+            '  <section class="extra">\n    <h2>{{extra.heading}}</h2>\n'
+            "    <p>{{&extra.body}}</p>\n  </section>\n", encoding="utf-8")
+        dump(root / "content" / "copy" / "en" / "extra.json", {
+            "headline": "An extra page",
+            "lede": "Its own wording, in its own file.",
+            "extra.heading": "Extra",
+            "extra.body": body,
+        })
+        self.build(root=root, out=root)
+        return root
+
+    def test_the_pages_the_suite_checks_are_the_pages_the_generator_writes(self):
+        root = self.site_with_a_second_page("Nothing to see.")
+        served = served_pages(root)
+        self.assertIn("extra/index.html", served,
+                      "the pages this suite checks are a list of names kept by hand, so a page "
+                      "added later is checked by nothing")
+        self.assertEqual(sorted(served), sorted(self.build(root=root)),
+                         "the pages the suite checks are not the pages the build writes")
+
+    def test_a_link_this_site_may_not_carry_is_caught_on_a_page_that_is_not_index(self):
+        root = self.site_with_a_second_page(
+            "A [beacon](http://evil.test/grab?c=1) and a [trap](javascript:void 0).")
+        found = {name: link_problems(links_on((root / name).read_text(encoding="utf-8")))
+                 for name in served_pages(root)}
+        self.assertEqual(found["index.html"], [],
+                         "the home page itself carries a link this site may not carry")
+        self.assertEqual(len(found["extra/index.html"]), 2,
+                         f"a second page's off-site link and its javascript: link are not both "
+                         f"refused: {found['extra/index.html']!r}")
+
+    def test_an_asset_a_second_page_loads_is_resolved_from_that_page_s_own_url(self):
+        # A page at <name>/index.html is served from its own directory, so a
+        # relative asset on it does not resolve to the repo root. Which file a
+        # page asks for is the question the asset checks ask, so they ask it
+        # of the page's own URL.
+        root = self.site_with_a_second_page("Nothing to see.")
+        self.assertEqual(served_from("extra/index.html", "tokens.css"), "extra/tokens.css")
+        self.assertEqual(served_from("index.html", "tokens.css"), "tokens.css")
 
 
 class CopyKeyTests(GeneratorTestCase):
@@ -489,6 +581,21 @@ class FactTests(GeneratorTestCase):
         marked = [index for index, when in enumerate(whens) if "this build" in when.lower()]
         self.assertEqual(marked, [0],
                          f"the newest record entry, and only it, is marked 'this build': {whens!r}")
+
+    def test_a_row_column_named_after_a_value_the_generator_works_out_is_refused(self):
+        # A row's columns are the values in scope inside its {{#each}}, so a
+        # column named after one of the generator's own values -- the site's
+        # address, the day a section is dated by -- would stand in for that
+        # value wherever the block names it. The puller refuses a column it
+        # does not know at pull time; the build refuses this one too, because
+        # the page is written from the snapshot rather than from the pull.
+        for column in ("site.address", "dates.status"):
+            with self.subTest(column=column):
+                snapshot = load(SNAPSHOT)
+                snapshot["record_entries"][0][column] = "somewhere else"
+                path = self.tmpdir() / "facts.json"
+                dump(path, snapshot)
+                self.refuse(ROOT, column, snapshot=path)
 
     def test_a_this_build_mark_left_behind_in_an_older_entry_is_refused(self):
         snapshot = load(SNAPSHOT)
@@ -674,6 +781,20 @@ class SiteAddressTests(GeneratorTestCase):
         self.assertNotIn(was, html,
                          "the old address is still on the page, so it lives in more than one "
                          "place")
+
+    def test_an_address_that_is_not_an_https_url_is_refused(self):
+        # The address is the one value the footer of every page links, so the
+        # build is where it is held to being an address a browser follows over
+        # https -- not a scheme that runs, and not a word that happens to be a
+        # non-empty string. #30 is the issue that edits this value.
+        for address in ("javascript:alert`1`", "x\" onload=\"alert(1)", "/founding-agents-site/",
+                        "http://todd450.github.io/founding-agents-site/", "  "):
+            with self.subTest(address=address):
+                root = self.sources()
+                site = load(root / "content" / "site.json")
+                site["address"] = address
+                dump(root / "content" / "site.json", site)
+                self.refuse(root, "address")
 
     def test_the_title_comes_from_site_json(self):
         title = re.search(r"<title>(.*?)</title>", self.page(root=ROOT), re.DOTALL).group(1)
