@@ -25,6 +25,7 @@ No network: tests/stub_pull.js hands the puller a stubbed fetch and makes the
 real one throw.
 """
 
+import datetime
 import json
 import re
 import shutil
@@ -130,6 +131,13 @@ def sql_literals(block):
 
 def load(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def day_after(day):
+    """The next day on the calendar. A date in a snapshot is a day, so a test
+    that needs the day after one says so rather than hard-coding a second
+    date that drifts from the first."""
+    return (datetime.date.fromisoformat(day) + datetime.timedelta(days=1)).isoformat()
 
 
 def text_values(snapshot):
@@ -265,6 +273,53 @@ class HandEditedSnapshotTests(unittest.TestCase):
     def test_a_fact_dated_after_the_day_of_the_pull_is_refused(self):
         self.assert_refused(lambda facts: facts["record_entries"][0].update(as_of="2099-01-01"),
                             "is dated after the day of the pull")
+
+    def test_a_fact_dated_after_the_day_the_snapshot_was_pulled_is_refused(self):
+        # The repair this class is here for: a stale fact fixed by hand and
+        # dated the day it was fixed, with pulled_at left alone. The snapshot
+        # then claims it was pulled before the fact in it was true, and the
+        # reason has to name the stamp -- that is the stale half, and dating
+        # the repair was the right thing to do. The day of the pull is later
+        # still here, so the only thing out of order is the stamp.
+        snapshot = json.loads(json.dumps(self.snapshot))
+        fixed_on = day_after(self.day)
+        snapshot["record_entries"][0]["as_of"] = fixed_on
+        problems = snapshot_problems(snapshot, day_after(fixed_on))
+        self.assertTrue(problems, "a fact dated after pulled_at should have been refused")
+        self.assertIn("is dated after pulled_at", problems[0])
+
+
+class DayOfThePullTests(unittest.TestCase):
+    """The day a pull reckons it is. It is the day the snapshot is stamped
+    with and the day no fact in it may be dated after, so it has to be the day
+    of the person running the pull: east of UTC the UTC day is still yesterday
+    for hours, and a fact they entered this morning would be refused as a day
+    that has not happened; west of UTC it is already tomorrow, and the
+    snapshot would be stamped with a day that has not started for them."""
+
+    # Two zones 25 hours apart, so their calendar days differ at every instant
+    # of every day -- which is what makes the second test below fail outright
+    # on a pull that reckons by UTC, whatever the hour the suite runs at.
+    # Neither has ever observed daylight saving, so a fixed offset is a sound
+    # oracle for the day in each.
+    ZONES = [("Pacific/Kiritimati", 14), ("Pacific/Pago_Pago", -11)]
+
+    def test_the_day_of_the_pull_is_the_day_where_the_pull_is_run(self):
+        for zone, hours in self.ZONES:
+            with self.subTest(zone=zone):
+                there = datetime.timezone(datetime.timedelta(hours=hours))
+                # Either side of the question, because the day can turn over
+                # while it is being asked.
+                before = datetime.datetime.now(there).date().isoformat()
+                answered = day_of_the_pull(zone)
+                after = datetime.datetime.now(there).date().isoformat()
+                self.assertIn(answered, (before, after),
+                              f"a pull run in {zone} must reckon by that day, not the UTC one")
+
+    def test_two_zones_a_day_apart_do_not_pull_on_the_same_day(self):
+        answered = {zone: day_of_the_pull(zone) for zone, _ in self.ZONES}
+        self.assertEqual(len(set(answered.values())), len(answered),
+                         f"these zones are never on the same day: {answered}")
 
 
 class SchemaAndSeedTests(unittest.TestCase):
@@ -527,6 +582,32 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
         self.assertEqual(self.run_puller(same, out, today="2027-03-02").returncode, 0)
         self.assertEqual(load(out)["pulled_at"], "2027-03-02")
         self.assert_snapshot_is_sound(load(out), "2027-03-02")
+
+    def test_a_stamp_left_behind_the_facts_is_not_carried_forward(self):
+        # The other way the stamp and the facts can part company. pulled_at is
+        # carried forward whenever a pull finds nothing new, so a stamp that
+        # fell behind the facts it stamps -- a hand edit, a fact repaired and
+        # dated the day it was repaired -- would be carried by every later
+        # pull and never looked at again. The snapshot would say it was pulled
+        # before the facts in it were true, which this suite refuses: a pull
+        # that writes a file the repo's own checks reject has to be undone by
+        # hand in a reviewed file, which is the one thing one definition of a
+        # valid snapshot is for.
+        out = self.tmpdir() / "facts.json"
+        same = FAILED_READ / "same-read-twice.json"
+
+        self.assertEqual(self.run_puller(same, out, today="2026-10-27").returncode, 0)
+        behind = load(out)
+        # The newest fact in these rows is dated 2026-10-26.
+        behind["pulled_at"] = "2026-10-01"
+        out.write_text(json.dumps(behind, indent=2) + "\n", encoding="utf-8")
+        self.assertTrue(snapshot_problems(out, "2026-10-27"),
+                        "a snapshot stamped before its own facts were true must fail this suite")
+
+        self.assertEqual(self.run_puller(same, out, today="2026-10-27").returncode, 0)
+        self.assertEqual(load(out)["pulled_at"], "2026-10-27",
+                         "a stamp behind the facts must be replaced with the day of the pull")
+        self.assert_snapshot_is_sound(load(out), "2026-10-27")
 
     def test_a_bad_read_leaves_an_existing_snapshot_untouched(self):
         tmp = self.tmpdir()

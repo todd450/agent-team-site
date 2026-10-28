@@ -299,15 +299,28 @@ function refusedCharacters(value) {
     (character) => `U+${character.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
 }
 
-// A day, and not one that has not happened yet. A fact is true "as of" a day,
-// and the snapshot is stamped with the day it was pulled; either one dated
-// after the day of the pull is a clock, a time zone or a typo, and the page
-// would show a reader a date in the future with nothing downstream in a
-// position to notice (decided on #27, 28 Oct 2026). ISO dates compare as
-// strings, which is the whole reason the snapshot writes them that way.
-function checkDay(where, value, day) {
+// A day, and not one later than the day it is measured against. A fact is
+// true "as of" a day, and the snapshot is stamped with the day it was pulled;
+// either one dated after the day of the pull is a clock, a time zone or a
+// typo, and the page would show a reader a date in the future with nothing
+// downstream in a position to notice (decided on #27, 28 Oct 2026). ISO dates
+// compare as strings, which is the whole reason the snapshot writes them that
+// way.
+//
+// The day a date is measured against is named in the reason, because the two
+// have different repairs: a fact after the day of the pull is a date to fix,
+// and a fact after pulled_at is a stamp to move.
+function checkDay(where, value, day, dayIs = 'the day of the pull', repair = '') {
   if (!isRealDate(value)) fail(`${where} is not a date: ${JSON.stringify(value)}`);
-  if (value > day) fail(`${where} is dated after the day of the pull (${day}): ${value}`);
+  if (value > day) fail(`${where} is dated after ${dayIs} (${day}): ${value}${repair}`);
+}
+
+// The newest day any of these facts is true as of, which is the earliest day
+// a snapshot of them can honestly say it was pulled on.
+function newestAsOf(facts) {
+  return Object.values(facts)
+    .flat()
+    .reduce((newest, row) => (row.as_of > newest ? row.as_of : newest), '');
 }
 
 // The brackets this text would put on the page as markup -- or, when this
@@ -506,9 +519,25 @@ function checkSnapshot(snapshot, options = {}) {
     });
     // checkRows puts the rows in position order and refuses a gap or a
     // repeat, so rows a reader would see out of order are the ones it moved.
-    if (serialise(checkRows(kind, rows, day)) !== serialise(rows)) {
+    const checked = checkRows(kind, rows, day);
+    if (serialise(checked) !== serialise(rows)) {
       fail(`${kind.table} is not stored in position order, so the page would read in one order `
         + 'and the snapshot in another');
+    }
+    // And no fact is true as of a day the snapshot had not been pulled on.
+    // pulled_at is carried forward whenever a pull finds nothing new, so
+    // without this the stamp and the facts can part company for good: a stamp
+    // edited behind the facts, or a stale fact repaired by hand and dated the
+    // day it was repaired, would leave the file claiming it was read before
+    // the facts in it were true. It is also the rule that keeps the two
+    // callers in step -- the suite judges the committed file as of the day in
+    // the file, and a pull judges its own output as of the day it runs, and
+    // as_of <= pulled_at <= the day of the pull is what makes those the same
+    // question.
+    for (const row of checked) {
+      checkDay(`${kind.table}[${row.position - 1}].as_of`, row.as_of, snapshot.pulled_at,
+        'pulled_at', ': a fact cannot be true as of a day the snapshot had not been pulled on, '
+        + 'so pulled_at belongs on the day the facts were last read');
     }
   }
   return snapshot;
@@ -540,8 +569,17 @@ function readPrevious(out) {
   }
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+// The day of the pull, as the person running it would write it: their own
+// calendar day, and not the UTC one. toISOString() gives the UTC day, which
+// west of UTC stamps the snapshot with a day that has not started for them,
+// and east of UTC refuses a fact they entered this morning as a day that has
+// not happened -- for every pull before 09:00 in a zone nine hours ahead.
+// The stamp and that refusal are both this one day, so it is the day where
+// the pull is run.
+function today(now = new Date()) {
+  const month = `${now.getMonth() + 1}`.padStart(2, '0');
+  const dayOfMonth = `${now.getDate()}`.padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${dayOfMonth}`;
 }
 
 /**
@@ -577,15 +615,19 @@ async function pull(options = {}) {
   // a pull that finds nothing new rewrites the same bytes and shows an empty
   // diff rather than a date change nobody needs to review.
   //
-  // A stamp already in the file is carried forward only if it is a day that
-  // has happened: a fast clock, or a hand edit, writes one in the future that
-  // no later pull would ever look at again, and the page would show a reader
-  // a date that has not come. Such a stamp is replaced with the day of the
-  // pull, so the next pull is also the fix.
+  // A stamp already in the file is carried forward only if it is a day the
+  // facts it stamps could have been read on: not one that has not happened
+  // (a fast clock, or a hand edit, writes a stamp in the future that no later
+  // pull would look at again, and the page would show a reader a date that
+  // has not come), and not one earlier than the newest fact under it (a stamp
+  // edited backwards, or a fact repaired by hand and dated the day it was
+  // repaired, leaves the file claiming it was read before its own facts were
+  // true). Either way the day of the pull is the truth, so the stamp is
+  // replaced and the next pull is also the fix.
   const previous = readPrevious(out);
   const unchanged = previous.snapshot !== null && factsOf(previous.snapshot) === serialise(facts);
   const stamp = unchanged ? previous.snapshot.pulled_at : null;
-  const carried = isRealDate(stamp) && stamp <= day;
+  const carried = isRealDate(stamp) && stamp <= day && stamp >= newestAsOf(facts);
   const snapshot = { pulled_at: carried ? stamp : day, ...facts };
 
   // The pull's own output, by the rules check.sh holds the committed snapshot
