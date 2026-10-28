@@ -17,6 +17,13 @@ python3 -m unittest discover -s tests
 echo "==> npm ci: the pinned checking tools"
 npm ci
 
+echo "==> markdown-it: what a renderer makes of every fact value the puller accepts"
+# The oracle for scripts/pull-facts.js, which reads a fact's text with Node's
+# standard library alone: a real CommonMark + GFM renderer renders every text
+# that gate accepts and must find no off-site href and no bracket outside a
+# <code> element.
+node tests/render_facts.js
+
 echo "==> html-validate: index.html is valid, well-formed HTML"
 npx --no-install html-validate index.html
 

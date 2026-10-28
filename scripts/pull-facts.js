@@ -3,7 +3,7 @@
 // Pulls the page's facts out of Supabase and writes content/facts.json, the
 // reviewed snapshot this repo commits (issue #27).
 //
-//   node scripts/pull-facts.js
+//   npm run facts:pull
 //
 // Only this script ever talks to Supabase. check.sh, CI, the generator and
 // every deploy read the snapshot in the repo, so they stay offline and
@@ -186,7 +186,22 @@ const LINK_TARGET = /\[[^[\]]*\]\(([^()]*)\)/g;
 // different answers. A fact writes a link one way, [text](url), which this
 // reader reads whole; link-like text in any other form is refused rather than
 // read (decided on #27, 27 Oct 2026).
-const LINK_LIKE = /:\/\/|\/\/|www\.|@/i;
+//
+// The last of these is a bare host: a dot between a host character and a run
+// of letters, which is how an address written the way people write them
+// begins. A renderer needs neither a scheme nor a "www." to make a link of
+// one -- markdown-it autolinks "evil-grabber.com/steal" into
+// href="http://evil-grabber.com/steal", over plain http, off this site -- and
+// tests/render_facts.js is what says so: the renderer itself, run from
+// check.sh, rather than another reading of the spec.
+//
+// No list of top-level domains, because a list is a thing that drifts and the
+// renderers do not agree on one anyway ("check.sh" is a link to markdown-it
+// and text to GitHub). So this is stricter than any of them, and says what a
+// fact may write outside backticks rather than which hosts exist: a filename
+// or a host in a fact goes in `backticks`, where a renderer puts its
+// characters on the page and links nothing.
+const LINK_LIKE = /:\/\/|\/\/|www\.|@|[A-Za-z0-9-]\.[A-Za-z]{2,}/i;
 // A backslash before a bracket or a parenthesis: an escape a renderer
 // honours and this reader cannot see, so the two disagree about where a link
 // ends.
@@ -277,11 +292,29 @@ function linkTargets(text) {
     return ' '; // a space, so taking a link out can join no new "]("
   });
   const unreadable = residue.includes('](')
-    || LINK_LIKE.test(residue)
+    || LINK_LIKE.test(outsideCode(residue))
     || ESCAPED_BRACKET.test(text)
     || REFERENCE_LINK.test(text)
     || LINK_DEFINITION.test(text);
   return { targets, unreadable };
+}
+
+// What this text says outside the code it quotes. A renderer autolinks
+// nothing inside a code span: it puts the characters between the backticks on
+// the page as characters, so `check.sh` and `https://evil.example` quoted as
+// code are words and not addresses, and that is where a fact writes a
+// filename or a host.
+//
+// Trusting those backticks takes the same reading markupOutsideBackticks
+// does, so when anything in the text makes that reading unsafe -- a line
+// ending, a backslash, an ampersand, a pipe, backticks that do not pair --
+// the whole text counts as outside, and link-like text anywhere in it is
+// refused. Only what is link-like is asked this question: a "](" is still
+// counted wherever it sits, because a link the reader cannot read whole is
+// the one thing it must never pass over.
+function outsideCode(text) {
+  const readable = UNREADABLE_TEXT.every(([, carries]) => !carries(text));
+  return readable ? text.replace(CODE_SPAN, ' ') : text;
 }
 
 function isRealDate(value) {
@@ -800,6 +833,7 @@ if (require.main === module) {
 module.exports = {
   pull,
   checkSnapshot,
+  checkText,
   isAllowedLink,
   linkTargets,
   markupOutsideBackticks,

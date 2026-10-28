@@ -118,6 +118,10 @@ READABLE = [
     (f"[the issue]({REPO_PREFIX}/issues/27) and [the site]({PAGES_PREFIX}/),",
      [f"{REPO_PREFIX}/issues/27", f"{PAGES_PREFIX}/"]),
     ("A bracketed aside [like this one] that links nowhere.", []),
+    # A filename or a host inside backticks: a renderer quotes it as code and
+    # links nothing, so there is no destination to find and nothing to refuse.
+    ("Run `check.sh`, then read `content/facts.json`.", []),
+    ("A literal `https://evil.example/x` quoted as code links nowhere.", []),
     ("An empty target [here]() points at the page itself.", [""]),
     ("A link off this site [evil](https://evil.example/x) is still read whole.",
      ["https://evil.example/x"]),
@@ -162,6 +166,18 @@ UNREADABLE = [
      "a fact writes a link in"),
     ("See www.attacker.example/evil for detail.",
      "an autolink to www.attacker.example/evil: GFM needs no scheme"),
+    # A bare host needs no "www." either. markdown-it's linkify autolinks any
+    # host with a real top-level domain, which is every address written the
+    # way people write them -- and tests/render_facts.js is the oracle that
+    # says so rather than this list being another thing to reason about.
+    ("Recorded 26 Oct 2026; figures at evil-grabber.com/steal.",
+     "an autolink to http://evil-grabber.com/steal, over plain http, with neither a scheme nor a "
+     "www. host in the text to find"),
+    ("See agents.io/x for detail.", "the same on a two-letter top-level domain"),
+    ("Notes at notes.co.uk/x.", "the same on a two-level one"),
+    ("Run check.sh before you push.",
+     "an autolink to http://check.sh: a filename outside backticks is a host to a renderer, "
+     "because 'sh' is a country"),
     ("Mail steal@attacker.example for detail.",
      "an autolink to mailto:steal@attacker.example"),
     (f"Served over {REPO_PREFIX[len('https:'):]} now.",

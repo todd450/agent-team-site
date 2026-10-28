@@ -22,6 +22,12 @@ What makes a row usable is written down in one place, `scripts/pull-facts.js` (d
 snapshot with that same definition, through `tests/rules.py`, so a read the puller accepts can
 never be a snapshot the checks then reject.
 
+That definition reads a fact's text with Node's standard library alone, so it has an oracle:
+`tests/render_facts.js` renders every text in this folder the puller accepts with markdown-it, a
+real CommonMark + GFM renderer, and `check.sh` fails when one of them would put an off-site `href`
+on the page or a bracket outside a `<code>` element. A scenario added here is rendered without that
+file changing.
+
 The characters a fact may carry are an allowlist -- letters, marks, numbers, punctuation, symbols
 and ordinary spaces, and nothing Unicode calls invisible by default -- rather than a list of the
 ones already found to be trouble. The scenarios from `control-character-in-text.json` to
@@ -75,6 +81,7 @@ reviewer reading the diff both see nothing of, and the list of those was never f
 | `bare-url-with-a-bracket.json` | the same walk written bare past a `]`, which a renderer escapes and keeps in the address |
 | `bare-url-on-this-site.json` | a bare address that does land on this site: a fact writes a link as `[text](url)` and in no other form |
 | `bare-www-address.json` | a bare `www.` host, which a renderer autolinks with no scheme in the text at all |
+| `bare-host-in-text.json` | a bare host with no `www.` either, which a renderer autolinks into a plain-`http` address off this site |
 | `bare-email-address.json` | a bare email address, which a renderer autolinks as `mailto:` |
 | `reference-style-link.json` | a link written as a reference, whose destination is named in a definition elsewhere, so the reader finds no target to check at all |
 | `character-reference-in-text.json` | a tag spelled `&#60;img …&#62;`, which a renderer decodes into brackets before anything reads the text |

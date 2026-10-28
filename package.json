@@ -2,10 +2,14 @@
   "name": "founding-agents-site-checks",
   "private": true,
   "description": "Development-only checks for this site. Nothing here ships to the page, which stays plain HTML and CSS; these are the standard tools check.sh runs on every pull request.",
+  "scripts": {
+    "facts:pull": "node scripts/pull-facts.js"
+  },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.64.1",
     "html-validate": "11.17.0",
+    "markdown-it": "14.3.3",
     "postcss-html": "2.0.0",
     "stylelint": "17.16.0",
     "stylelint-config-recommended": "18.0.0",

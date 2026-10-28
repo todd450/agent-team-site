@@ -1,0 +1,22 @@
+{
+  "name": "a bare host with a real top-level domain",
+  "why": "A renderer autolinks a host with no scheme in front of it, so this fact reaches the page as an off-site link. A fact writes a link as [text](url) and in no other form; a filename or a host in its prose goes in backticks, where a renderer puts the characters on the page and links nothing.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "figure": "5,410",
+          "unit": "",
+          "lead": "Volume nobody can read.",
+          "claim": "Commits in under five months.",
+          "source": "Recorded 26 Oct 2026; figures at evil-grabber.com/steal."
+        }
+      ]
+    }
+  }
+}
