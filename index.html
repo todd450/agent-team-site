@@ -4,12 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Founding Agents — the team's test bed</title>
+<!-- modern-normalize first, tokens.css last: the reset is only a floor the
+     page stands on, and every colour, font and spacing above it comes from a
+     token (issue #26). The reset is a file in this repo, so the page asks
+     nobody else for bytes when it loads. -->
+<link rel="stylesheet" href="modern-normalize.css">
 <link rel="stylesheet" href="tokens.css">
 <style>
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  /* No box-sizing, -webkit-text-size-adjust or body margin reset here:
+     modern-normalize above covers all three. */
   body{
-    margin:0;
     background:var(--paper);
     color:var(--ink);
     font-family:var(--font-text);

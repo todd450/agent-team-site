@@ -10,7 +10,9 @@ rules:
 - A link into a file in this repo points at a file that is actually there to
   be served: a 404 opens a `red` issue and freezes every merge.
 - The page is built from the six sections the brief names, none of them a
-  leftover placeholder, and tokens.css is its one stylesheet.
+  leftover placeholder, and its stylesheets are the vendored reset and then
+  tokens.css, the one token source (the vendored file's own rules are in
+  test_assets.py).
 - Every var(...) the page calls is defined in tokens.css.
 
 Dropped in issue #12, because a standard tool in check.sh now does the job:
@@ -84,10 +86,14 @@ class PageShapeTests(unittest.TestCase):
         self.html = read(INDEX_HTML)
         self.page = parse(self.html)
 
-    def test_links_the_one_token_source(self):
+    def test_links_the_reset_then_the_one_token_source(self):
+        # The vendored reset comes first and tokens.css last, so every
+        # colour, font and spacing the page draws still resolves to a token:
+        # the reset can never win a cascade against them, and so can never
+        # become a second source of them (issue #26).
         stylesheet_links = [attrs.get("href") for tag, attrs in self.page.tags
                              if tag == "link" and attrs.get("rel") == "stylesheet"]
-        self.assertEqual(stylesheet_links, ["tokens.css"])
+        self.assertEqual(stylesheet_links, ["modern-normalize.css", "tokens.css"])
 
     def test_header_has_one_headline_with_text(self):
         headers = [attrs for tag, attrs in self.page.tags if tag == "header"]
