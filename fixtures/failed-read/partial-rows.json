@@ -3,6 +3,7 @@
   "why": "The answer parses and looks like rows, but the content-range header says there are more. A short read is a failed read.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "rows came back of 2",
   "responses": {
     "record_entries": {
       "rows": [

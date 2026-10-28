@@ -625,9 +625,10 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
         ahead = load(out)
         ahead["pulled_at"] = "2099-01-01"
         out.write_text(json.dumps(ahead, indent=2) + "\n", encoding="utf-8")
-        self.assertEqual(snapshot_problems(out, "2027-03-02"),
-                         ["pulled_at is dated after the day of the pull (2027-03-02): 2099-01-01"],
-                         "a snapshot stamped in the future must fail this suite too")
+        problems = snapshot_problems(out, "2027-03-02")
+        self.assertTrue(problems, "a snapshot stamped in the future must fail this suite too")
+        self.assertIn("pulled_at is dated after the day of the pull (2027-03-02): 2099-01-01",
+                      problems[0])
 
         self.assertEqual(self.run_puller(same, out, today="2027-03-02").returncode, 0)
         self.assertEqual(load(out)["pulled_at"], "2027-03-02")

@@ -3,6 +3,7 @@
   "why": "Positions 1 and 3 came back, so a row is missing and the page's order has a hole in it.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "positions are not 1..n",
   "responses": {
     "status_steps": {
       "rows": [

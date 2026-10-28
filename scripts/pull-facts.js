@@ -82,12 +82,24 @@ const ALLOWED_LINK_PREFIXES = [
 // A parenthesis is not among the plain URL characters: CommonMark keeps a
 // balanced pair inside a link's destination, so a reader that stops at the
 // first ")" is left holding a prefix of the address and would vouch for a
-// page nobody wrote down. Nor is an ampersand: a renderer resolves a
-// character reference inside a destination and an HTML parser resolves one
-// inside an href, so ".../&period;&period;/evil" and ".../&#37;2e&#37;2e/evil"
-// are dots and escapes by the time a browser reads them. No "&" means no
-// reference in any spelling; a semicolon goes with it, since it ends one.
-const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$'*+,=%]*$/;
+// page nobody wrote down. Nor is a semicolon: a renderer resolves a character
+// reference inside a destination and an HTML parser resolves one inside an
+// href, so ".../&period;&period;/evil" and ".../&#37;2e&#37;2e/evil" are dots
+// and escapes by the time a browser reads them.
+//
+// An ampersand is allowed, because by itself it is the character that
+// separates two query parameters and nothing else -- .../issues?q=is%3Aopen&
+// sort=created is an ordinary address on this repo, and refusing it said the
+// opposite of what was wrong. A named reference needs the semicolon above to
+// be decoded at all, and the few HTML decodes without one (&amp, &lt, &copy)
+// are not characters that decide where an address goes.
+const PLAIN_URL_CHARS = /^[A-Za-z0-9\-._~:/?#[\]@!$&'*+,=%]*$/;
+// A numeric character reference, which is the one spelling that needs no
+// semicolon to be decoded: Chromium resolves an href of
+// ".../founding-agents-site/&#46&#46/&#46&#46/attacker/evil" to
+// github.com/attacker/evil, with not a dot or a semicolon in the address as
+// written. So "&#" is refused on its own, in any spelling, decimal or hex.
+const NUMERIC_REFERENCE = /&#/;
 const ESCAPE = /%[0-9A-Fa-f]{2}/g;
 const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
 
@@ -241,7 +253,7 @@ function isAllowedLink(link) {
     // address. A percent escape may stand for ordinary text (?q=is%3Apr) but
     // not for a character that decides where the address goes -- "%2e%2e"
     // resolves as "..".
-    if (!PLAIN_URL_CHARS.test(rest)) return false;
+    if (!PLAIN_URL_CHARS.test(rest) || NUMERIC_REFERENCE.test(rest)) return false;
     if (SEPARATOR_ESCAPE.test(rest) || rest.replace(ESCAPE, '').includes('%')) return false;
     // A dot segment needs no slash after it to walk up a level: a query, a
     // fragment or the end of the address ends the path just as well, so the

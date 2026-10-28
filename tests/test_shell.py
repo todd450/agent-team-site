@@ -184,13 +184,13 @@ class LinksAllowedTests(unittest.TestCase):
                                  f"the page links {path!r}, which is not in this repo: a 404 on "
                                  f"the nightly check opens a red issue and freezes every merge")
 
-    # No separate "not the private plugin repo" test: the allowlist in
-    # The allowlist already requires every absolute link to match one of its
-    # two prefixes exactly, with a boundary check on the character
-    # that follows, so a link into the private repo (todd450/founding-agents,
-    # without "-site") can never pass it. A standalone substring check for
-    # "founding-agents" would now be a false positive on this repo's own,
-    # legitimate address -- founding-agents-site contains that substring.
+    # No separate "not the private plugin repo" test: the allowlist already
+    # requires every absolute link to match one of its two prefixes exactly,
+    # with a boundary check on the character that follows, so a link into the
+    # private repo (todd450/founding-agents, without "-site") can never pass
+    # it. A standalone substring check for "founding-agents" would now be a
+    # false positive on this repo's own, legitimate address --
+    # founding-agents-site contains that substring.
 
 
 STYLE_BLOCK_RE = re.compile(r"<style[^>]*>(.*?)</style>", re.DOTALL)

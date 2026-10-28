@@ -3,5 +3,6 @@
   "why": "An empty answer is indistinguishable from a wiped table, and would quietly empty a whole section of the page.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "no rows came back",
   "responses": { "measures": { "rows": [], "count": 0 } }
 }

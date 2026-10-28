@@ -3,5 +3,6 @@
   "why": "A read that hangs must time out and fail, rather than hold the build open until CI kills it.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "aborted due to timeout",
   "responses": { "measures": { "delay_ms": 60000 } }
 }

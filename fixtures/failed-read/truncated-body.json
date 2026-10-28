@@ -3,5 +3,6 @@
   "why": "A connection dropped mid-answer still arrives as 200. Half a row must never reach the snapshot.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "the answer was not JSON",
   "responses": { "measures": { "body": "[{\"position\":1,\"as_of\":\"2026-10-26\",\"label\":\"Merges not made by the in" } }
 }

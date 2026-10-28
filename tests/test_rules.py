@@ -47,6 +47,12 @@ ALLOWED = [
     (f"{REPO_PREFIX}/blob/main/check.sh", "a file in it"),
     (f"{REPO_PREFIX}/issues?q=open", "a query on it"),
     (f"{REPO_PREFIX}/pulls?q=is%3Apr+is%3Amerged", "a query whose escapes are ordinary text"),
+    # Two parameters, which is an ordinary GitHub address and the page's own
+    # to write. An "&" begins a character reference only with a ";" to end
+    # it, and no reference without one decodes to a dot, a slash or a
+    # backslash -- so it is a ";" that walks an address out of this site, and
+    # a ";" is still refused below.
+    (f"{REPO_PREFIX}/issues?q=is%3Aopen&sort=created", "a query of two parameters"),
     (PAGES_PREFIX, "the site itself"),
     (f"{PAGES_PREFIX}/", "the site's own page"),
     (f"{PAGES_PREFIX}/index.html", "a file on the site"),
@@ -86,6 +92,12 @@ REFUSED = [
     (f"{REPO_PREFIX}/..&#x2F;..&#x2F;attacker/evil", "the same, in hex"),
     (f"{REPO_PREFIX}/&#37;2e&#37;2e/evil",
      "github.com/evil: a decoded '&#37;' is a '%', which puts back the escaped dots"),
+    # A numeric reference needs no semicolon to be decoded. Chromium resolves
+    # this href to github.com/attacker/evil with neither a dot nor a semicolon
+    # in the address as written, which is why "&#" is refused on its own.
+    (f"{REPO_PREFIX}/&#46&#46/&#46&#46/attacker/evil",
+     "github.com/attacker/evil, on numeric references no semicolon ends"),
+    (f"{REPO_PREFIX}/&#x2E&#x2E/attacker/evil", "the same, in hex"),
     (f"{PAGES_PREFIX}/&period;&period;/evil/x", "todd450.github.io/evil/x, past the same dots"),
     (f"{PAGES_PREFIX}/../../evil/x", "todd450.github.io/evil/x, another site on the account"),
     (f"{PAGES_PREFIX}/..?q=1", "todd450.github.io/, which answers 404"),
