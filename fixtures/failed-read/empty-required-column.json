@@ -1,0 +1,20 @@
+{
+  "name": "a step with no state",
+  "why": "A required column came back as the empty string. `not null` in the tables does not stop it -- '' is not null -- so a step would reach the page with a name and no state beside it, a gap nothing downstream notices.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "status_steps[0].state is blank",
+  "responses": {
+    "status_steps": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-24",
+          "name": "main requires a pull request",
+          "state": "",
+          "detail": "Repository settings are not public, so this line carries a date and no link."
+        }
+      ]
+    }
+  }
+}

@@ -61,7 +61,25 @@ KINDS = {
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 STANDINGS = {"hit", "pending", "miss", ""}
+# The two columns a fact may leave empty, because the fact has nothing to put
+# there: a cost whose figure stands alone with no tail beside it, and a measure
+# with no bar to be judged against. Every other text column has to show a
+# reader something, and the empty string is the only empty either of these two
+# may hold -- a column of spaces or of one tab shows a reader nothing while
+# passing for a value.
+OPTIONAL = {("costs", "unit"), ("measures", "standing")}
+# The columns the tables restrict to a short list of words
+# (supabase/schema.sql: check (standing in ('hit', 'pending', 'miss'))). A
+# snapshot carrying anything else is one the page cannot render, so the puller
+# refuses it and this says so of whatever snapshot it wrote.
+LISTS = {("measures", "standing"): STANDINGS}
 ADD_COLUMN_RE = re.compile(r"alter table (\w+) add column (\w+)")
+# The working file write() moves over the snapshot, named for the process that
+# wrote it. A run killed between the write and the rename leaves one behind.
+WORKING_FILE = "facts.json.4242.tmp"
+# A neighbour in the same directory whose name is close to a working file's and
+# is not one: clearing the leftovers must not reach it.
+NEIGHBOUR = "facts.json.bak"
 
 
 def unchecked_links(value):
@@ -154,8 +172,20 @@ class SnapshotRulesMixin:
                 self.assertIsNotNone(parse_iso_date(row["as_of"]),
                                      f"{kind} row {index} has no as_of date: {row['as_of']!r}")
                 for column in columns[2:]:
-                    self.assertIsInstance(row[column], str,
-                                          f"{kind}.{column} is not text: {row[column]!r}")
+                    value = row[column]
+                    self.assertIsInstance(value, str,
+                                          f"{kind}.{column} is not text: {value!r}")
+                    # An optional column holds "" when the fact has nothing to
+                    # put there; anything else that shows a reader nothing is
+                    # a blank where the page's largest figure, or a step's
+                    # state, goes.
+                    if not ((kind, column) in OPTIONAL and value == ""):
+                        self.assertTrue(value.strip(),
+                                        f"{kind} row {index} has a blank {column}: {value!r}")
+                    if (kind, column) in LISTS:
+                        self.assertIn(value, LISTS[(kind, column)],
+                                      f"{kind} row {index} has a {column} that is not one of "
+                                      f"{sorted(LISTS[(kind, column)])}: {value!r}")
         self.assertEqual(positions, list(range(1, len(rows) + 1)),
                          f"{kind} positions are not 1..n in order, with no gap and no repeat: "
                          f"{positions!r}")
@@ -210,11 +240,6 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
             with self.subTest(position=row["position"]):
                 self.assertEqual(row["figure"], cost["figure"])
                 self.assertEqual(row["unit"], cost["unit"])
-
-    def test_a_measure_s_standing_is_one_of_the_four_values(self):
-        for row in self.snapshot["measures"]:
-            with self.subTest(position=row["position"]):
-                self.assertIn(row["standing"], STANDINGS)
 
     def test_the_snapshot_holds_the_four_kinds_and_nothing_else(self):
         self.assertEqual(list(self.snapshot.keys()), ["pulled_at"] + list(KINDS),
@@ -438,6 +463,31 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
                                   f"{path.name} no longer fails on the rule it tests")
                 self.assertEqual(list(tmp.iterdir()), [out],
                                  "a failed pull left a temporary file behind")
+
+    def test_a_pull_clears_the_working_file_a_killed_run_left_behind(self):
+        # A pull killed between writing its working file and renaming it over
+        # the snapshot leaves that file in the snapshot's own directory. The
+        # snapshot survives whole, which is the important half, but the
+        # leftover is untracked clutter beside a reviewed file, one per
+        # process, that a `git add -A` can commit. A signal skips any cleanup
+        # the killed run might have done, so the next pull is what clears it --
+        # whether that pull goes on to succeed or to refuse the read.
+        before = SNAPSHOT.read_bytes()
+        for path in scenarios():
+            scenario = load(path)
+            with self.subTest(scenario=path.name):
+                tmp = self.tmpdir()
+                out = tmp / "facts.json"
+                out.write_bytes(before)
+                (tmp / WORKING_FILE).write_bytes(before)
+                (tmp / NEIGHBOUR).write_bytes(before)
+                result = self.run_puller(path, out)
+                self.assertEqual(result.returncode == 0, scenario["outcome"] == "ok",
+                                 result.stderr)
+                self.assertEqual(sorted(p.name for p in tmp.iterdir()),
+                                 ["facts.json", NEIGHBOUR],
+                                 "a pull must clear a working file left in the snapshot's "
+                                 "directory -- and nothing else that lives there")
 
     def test_a_bad_read_writes_no_snapshot_at_all_when_there_is_none(self):
         tmp = self.tmpdir()

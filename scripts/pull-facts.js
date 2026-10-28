@@ -35,6 +35,11 @@ const READ_TIMEOUT_MS = 15000;
 // One table per kind of fact, in the order the snapshot holds them. Every row
 // carries position (1..n, the order it appears in) and as_of (the date the
 // fact is true as of), then its own typed columns.
+//
+// optional names the columns a fact may leave empty, because the fact has
+// nothing to put there; every other column has to show a reader something.
+// lists names the columns the tables restrict to a short list of words, with
+// the same words supabase/schema.sql and tests/test_facts.py hold.
 const KINDS = [
   { table: 'status_steps', columns: ['position', 'as_of', 'name', 'state', 'detail'] },
   // A cost's figure is the number alone and its unit the small tail beside
@@ -44,10 +49,16 @@ const KINDS = [
     columns: ['position', 'as_of', 'figure', 'unit', 'lead', 'claim', 'source'],
     optional: ['unit'],
   },
+  // standing is empty when a measure has no bar to be judged against, and is
+  // one of three words when it has: the same three the tables allow
+  // (check (standing in ('hit', 'pending', 'miss'))) and the page's own test
+  // reads. A word off the list, or one of them in another letter case, is a
+  // snapshot the checks would then reject, so it never gets written.
   {
     table: 'measures',
     columns: ['position', 'as_of', 'label', 'bar', 'current', 'standing'],
     optional: ['standing'],
+    lists: { standing: ['hit', 'pending', 'miss'] },
   },
   { table: 'record_entries', columns: ['position', 'as_of', 'headline', 'entry'] },
 ];
@@ -122,7 +133,19 @@ const UNREADABLE_TEXT = [
   ['`', (value) => /``/.test(value) || (value.match(/`/g) || []).length % 2 !== 0],
 ];
 // What a [text](url) link points at, whatever its scheme.
-const LINK_TARGET = /\[[^\]]*\]\(([^)]*)\)/g;
+//
+// Neither class may hold the character that opens what it is inside: no "["
+// in the text, no "(" in the destination. That is what keeps the reader
+// linear in the length of the text. A class that can swallow its own opening
+// character rescans from every one of them, so a value made of a long run of
+// "[" takes the reader minutes rather than milliseconds -- and a fact's text
+// has no length limit (tests/test_links.py pins the measurement).
+//
+// It costs nothing a fact needs: a destination may hold a balanced pair of
+// parentheses, which this reader must not read as a whole address anyway, and
+// link text may hold balanced brackets, which it must not either. In both the
+// text keeps its "](" and is reported as a link that cannot be read whole.
+const LINK_TARGET = /\[[^[\]]*\]\(([^()]*)\)/g;
 // A bare address, or anything else a renderer turns into a link on its own.
 // GFM autolinks a literal "https://..." run, a scheme-relative "//host", a
 // "www." host and an email address, and it ends such a run at whitespace --
@@ -136,16 +159,16 @@ const LINK_LIKE = /:\/\/|\/\/|www\.|@/i;
 // honours and this reader cannot see, so the two disagree about where a link
 // ends.
 const ESCAPED_BRACKET = /\\[[\]()]/;
-// A parenthesis inside a target the reader did read: a destination may hold
-// a balanced pair, so what the reader stopped at is not where the link ends.
-const PAREN = /[()]/;
 // The other two spellings of a link, which name their destination elsewhere:
 // a reference or collapsed link ("[text][ref]", "[text][]") and the
 // definition that gives it an address ("[ref]: ..."). Neither carries a
 // "](", and a definition's address needs no "://", so a reader looking for
 // those finds nothing at all where a renderer finds a link.
 const REFERENCE_LINK = /\]\[/;
-const LINK_DEFINITION = /^ {0,3}\[[^\]]*\]:/m;
+// No "[" in the label here either, for the same reason: with one, every line
+// start is a fresh scan of the whole text. A label holds no unescaped "["
+// anyway, and a backslash before one is refused before any link is read.
+const LINK_DEFINITION = /^ {0,3}\[[^[\]]*\]:/m;
 
 class PullError extends Error {}
 
@@ -209,10 +232,12 @@ function isAllowedLink(link) {
 // So the reader accounts for every "](" the text contains: whatever is left
 // once the links it did read are taken out must hold none, and must hold
 // nothing else link-like either. Beyond that, a backslash-escaped bracket, a
-// target carrying a parenthesis, a "][" and a line that defines a reference
-// are each a link it cannot see whole. When it cannot read one whole it says
-// so, and the pull refuses the fact rather than vouching for a link it never
-// read.
+// "][" and a line that defines a reference are each a link it cannot see
+// whole. A bracket in a link's text and a parenthesis in its destination need
+// no rule of their own: LINK_TARGET matches neither, so such a link is left
+// in the residue with its "](" intact. When the reader cannot read a link
+// whole it says so, and the pull refuses the fact rather than vouching for a
+// link it never read.
 function linkTargets(text) {
   const targets = [];
   const residue = text.replace(LINK_TARGET, (span, target) => {
@@ -223,8 +248,7 @@ function linkTargets(text) {
     || LINK_LIKE.test(residue)
     || ESCAPED_BRACKET.test(text)
     || REFERENCE_LINK.test(text)
-    || LINK_DEFINITION.test(text)
-    || targets.some((target) => PAREN.test(target));
+    || LINK_DEFINITION.test(text);
   return { targets, unreadable };
 }
 
@@ -310,7 +334,21 @@ function checkRows(kind, rows) {
       const optional = (kind.optional || []).includes(column);
       const value = row[column] === null && optional ? '' : row[column];
       if (value === undefined) fail(`${where} has no ${column}`);
-      out[column] = checkText(`${where}.${column}`, value);
+      const text = checkText(`${where}.${column}`, value);
+      // "" is what an optional column holds when the fact has nothing to put
+      // there, and it is the only empty any column may hold. `not null` in
+      // the tables stops none of this -- "" is not null -- so a step with no
+      // state, a measure with no label, or a record entry of one tab would
+      // otherwise be written into the snapshot and leave a gap on the page
+      // that nothing downstream notices.
+      if (!(optional && text === '') && text.trim() === '') {
+        fail(`${where}.${column} is blank: ${JSON.stringify(text)}`);
+      }
+      const list = (kind.lists || {})[column];
+      if (list && text !== '' && !list.includes(text)) {
+        fail(`${where}.${column} is not one of ${list.join(', ')}: ${JSON.stringify(text)}`);
+      }
+      out[column] = text;
     }
     return out;
   });
@@ -416,6 +454,8 @@ async function pull(options = {}) {
   };
   const out = options.out || SNAPSHOT_PATH;
 
+  sweep(out);
+
   const facts = {};
   for (const kind of KINDS) {
     // One table at a time: the first bad read stops the pull.
@@ -431,6 +471,33 @@ async function pull(options = {}) {
 
   write(out, serialise({ pulled_at, ...facts }));
   return { path: out, changed: !unchanged };
+}
+
+// The working file this script writes beside the snapshot, named for the
+// process that wrote it.
+const WORKING_FILE = /^\d+\.tmp$/;
+
+// Any working file an earlier run left in the snapshot's directory, cleared
+// before this one starts. A run killed between the write and the rename
+// leaves its file behind -- a signal skips the cleanup in write() -- and the
+// leftover is as large as the snapshot, sits untracked beside a reviewed
+// file where a `git add -A` can commit it, and accumulates one per process
+// until something clears it. The next pull is that something, whether it goes
+// on to write a snapshot or to refuse the read.
+function sweep(out) {
+  const directory = path.dirname(out);
+  const prefix = `${path.basename(out)}.`;
+  let names;
+  try {
+    names = fs.readdirSync(directory);
+  } catch {
+    return; // no directory yet, so nothing to clear
+  }
+  for (const name of names) {
+    if (name.startsWith(prefix) && WORKING_FILE.test(name.slice(prefix.length))) {
+      fs.rmSync(path.join(directory, name), { force: true });
+    }
+  }
 }
 
 // Written beside the snapshot and moved over it, so the file a reader sees is

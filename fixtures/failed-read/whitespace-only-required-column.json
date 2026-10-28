@@ -1,0 +1,21 @@
+{
+  "name": "a measure with a label of spaces",
+  "why": "The second spelling of an empty required column: not empty, and still nothing a reader can see. A measure would reach the page with a bar and a current value and no label saying what is being measured.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "measures[0].label is blank",
+  "responses": {
+    "measures": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "label": "  ",
+          "bar": "0",
+          "current": "0",
+          "standing": "hit"
+        }
+      ]
+    }
+  }
+}

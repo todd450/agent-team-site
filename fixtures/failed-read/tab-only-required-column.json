@@ -1,0 +1,19 @@
+{
+  "name": "a record entry of one tab",
+  "why": "The third spelling: one tab, which no renderer shows at all. The entry under the headline would be empty on the page, and a tab is not a character the text rules report, so nothing else would catch it.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "record_entries[0].entry is blank",
+  "responses": {
+    "record_entries": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "headline": "protection worked by surprise",
+          "entry": "\t"
+        }
+      ]
+    }
+  }
+}

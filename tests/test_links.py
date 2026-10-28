@@ -22,11 +22,15 @@ What the cases pin:
   way -- a line ending, a backslash escape, a character reference, a cell
   separator, backticks that do not pair -- is reported rather than read,
   because a tag a reader thinks is quoted is an element on the page.
+- Both readers answer the longest text promptly. A fact's text has no length
+  limit, so a reader that rescans it from every opening bracket turns one long
+  value into a pull, a check.sh run and a CI run that take minutes.
 """
 
 import json
 import shutil
 import subprocess
+import time
 import unittest
 from pathlib import Path
 
@@ -214,6 +218,29 @@ MARKUP = [
 ]
 
 
+# A fact's text has no length limit: a Postgres text column has none, the page
+# already carries a fact of 1,423 characters, and nobody writing one counts.
+# So a reader has to be linear in the length of the text it reads. A reader
+# that rescans from each opening bracket is quadratic instead, and one long
+# value made of a single repeated punctuation character then takes a pull, and
+# with it check.sh and CI, from a tenth of a second to minutes.
+#
+# Each of these is the start of something the readers look for, repeated to a
+# value far longer than any fact: a bracket a link opens with, a link left
+# open, a line that could begin a reference definition, and a backtick that
+# opens a code span.
+LONG_RUNS = ("[", "[a](", "  [\n", "`")
+LONG_RUN_LENGTH = 200000
+# A linear reader answers each of these in milliseconds, so a bound this loose
+# fails only on a reader that rescans: the quadratic one took 17s over 160,000
+# characters and 70s inside a full pull.
+LONG_RUN_SECONDS = 5
+
+
+def long_run(run):
+    return run * (LONG_RUN_LENGTH // len(run))
+
+
 class LinkRuleTests(unittest.TestCase):
     """tests/links.py, the copy the suite checks the page and the snapshot
     with."""
@@ -255,6 +282,23 @@ class MarkupReaderTests(unittest.TestCase):
                 self.assertEqual(markup_outside_backticks(text), brackets)
 
 
+class LongTextTests(unittest.TestCase):
+    """tests/links.py on the longest text: the readers answer a value far
+    longer than any fact promptly, however much of it is punctuation."""
+
+    def test_a_long_run_of_one_character_is_read_promptly(self):
+        for run in LONG_RUNS:
+            with self.subTest(run=run):
+                text = long_run(run)
+                started = time.monotonic()
+                link_targets(text)
+                markup_outside_backticks(text)
+                elapsed = time.monotonic() - started
+                self.assertLess(elapsed, LONG_RUN_SECONDS,
+                                f"reading {len(text)} characters of {run!r} took {elapsed:.1f}s: "
+                                "a reader that rescans the text makes a pull take minutes")
+
+
 class PullerAgreesTests(unittest.TestCase):
     """scripts/pull-facts.js, the copies that decide what may enter the
     snapshot. They must answer every case the same way."""
@@ -292,6 +336,18 @@ class PullerAgreesTests(unittest.TestCase):
                 self.assertEqual([answer["targets"], answer["unreadable"]],
                                  [targets, unreadable],
                                  "the puller's link reader and tests/links.py disagree")
+
+    def test_the_puller_reads_a_long_run_of_one_character_promptly_too(self):
+        # The puller is the copy a pull runs, so this is the measurement that
+        # says a pull cannot be made to spin on one long value.
+        texts = [long_run(run) for run in LONG_RUNS]
+        started = time.monotonic()
+        answers = self.ask_the_puller(texts=texts, markup=texts)
+        elapsed = time.monotonic() - started
+        self.assertEqual(len(answers["texts"]), len(texts))
+        self.assertLess(elapsed, LONG_RUN_SECONDS,
+                        f"the puller took {elapsed:.1f}s over {len(texts)} long values: a reader "
+                        "that rescans the text makes a pull take minutes")
 
     def test_the_puller_reads_a_text_s_markup_the_same_way(self):
         texts = [text for text, _ in MARKUP]

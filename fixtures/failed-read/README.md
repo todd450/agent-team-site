@@ -27,6 +27,12 @@ suite never touches the network.
 | `empty-table.json` | 200 and an empty table, which would silently empty a section of the page |
 | `gap-in-positions.json` | positions 1 and 3: a row is missing, so the page's order has a hole |
 | `missing-column.json` | a row without its `as_of`, so a fact arrives with no date |
+| `empty-required-column.json` | a step whose `state` is the empty string, which `not null` in the tables does not stop |
+| `whitespace-only-required-column.json` | a measure whose `label` is spaces: not empty, and still nothing a reader can see |
+| `tab-only-required-column.json` | a record entry of one tab, which no renderer shows at all |
+| `empty-optional-column.json` | the other side of that rule: `unit` and `standing` spelled `''` on purpose, which must still succeed |
+| `standing-outside-the-list.json` | a `standing` that is not `hit`, `pending` or `miss`, which the snapshot test would then refuse |
+| `standing-in-another-letter-case.json` | the same list in another letter case: `Hit` is not `hit` |
 | `markup-in-text.json` | a row with a tag outside backticks, which would put markup on the page |
 | `off-site-link.json` | a row linking off this site, which the nightly link check would open `red` on |
 | `script-scheme-link.json` | a row whose link points at a `javascript:` scheme rather than at a page |

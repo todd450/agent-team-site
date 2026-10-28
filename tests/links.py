@@ -48,8 +48,20 @@ SEPARATOR_ESCAPE_RE = re.compile(r"%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])")
 PATH_ENDS_RE = re.compile(r"[?#]")
 
 # A link, as this reader can read one: [text](target), with no bracket in the
-# text and no ")" in the target.
-LINK_TARGET_RE = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
+# text and no parenthesis in the target.
+#
+# Neither class may hold the character that opens what it is inside: no "[" in
+# the text, no "(" in the destination. That is what keeps the reader linear in
+# the length of the text. A class that can swallow its own opening character
+# rescans from every one of them, so a value made of a long run of "[" takes
+# the reader minutes rather than milliseconds -- and a fact's text has no
+# length limit (tests/test_links.py pins the measurement).
+#
+# It costs nothing a fact needs: a destination may hold a balanced pair of
+# parentheses, which this reader must not read as a whole address anyway, and
+# link text may hold balanced brackets, which it must not either. In both the
+# text keeps its "](" and is reported as a link that cannot be read whole.
+LINK_TARGET_RE = re.compile(r"\[[^\[\]]*\]\(([^()]*)\)")
 # A bare address, or anything else a renderer turns into a link on its own.
 # GFM autolinks a literal "https://..." run, a scheme-relative "//host", a
 # "www." host and an email address, and it ends such a run at whitespace --
@@ -62,16 +74,16 @@ LINK_LIKE_RE = re.compile(r"://|//|www\.|@", re.IGNORECASE)
 # A backslash before a bracket or a parenthesis: an escape a renderer honours
 # and this reader cannot see, so the two disagree about where a link ends.
 ESCAPED_BRACKET_RE = re.compile(r"\\[\[\]()]")
-# A parenthesis inside a target the reader did read: a destination may hold a
-# balanced pair, so what the reader stopped at is not where the link ends.
-PAREN_RE = re.compile(r"[()]")
 # The other two spellings of a link, which name their destination elsewhere:
 # a reference or collapsed link ("[text][ref]", "[text][]") and the
 # definition that gives it an address ("[ref]: ..."). Neither carries a "](",
 # and a definition's address needs no "://", so a reader looking for those
 # finds nothing at all where a renderer finds a link.
 REFERENCE_LINK_RE = re.compile(r"\]\[")
-LINK_DEFINITION_RE = re.compile(r"^ {0,3}\[[^\]]*\]:", re.MULTILINE)
+# No "[" in the label here either, for the same reason: with one, every line
+# start is a fresh scan of the whole text. A label holds no unescaped "["
+# anyway, and a backslash before one is refused before any link is read.
+LINK_DEFINITION_RE = re.compile(r"^ {0,3}\[[^\[\]]*\]:", re.MULTILINE)
 
 # What two backticks quote as code: a short literal, between single
 # backticks, on one line of text that holds nothing a renderer reads before
@@ -164,10 +176,12 @@ def link_targets(text):
     So the reader has to account for every "](" the text contains: whatever
     is left once the links it did read are taken out must hold none, and must
     hold nothing else link-like either. Beyond that, a backslash-escaped
-    bracket, a target carrying a parenthesis, a "][" and a line that defines
-    a reference are each a link it cannot see whole. When it cannot, it says
-    so and the caller refuses the text rather than vouching for a link it
-    never read.
+    bracket, a "][" and a line that defines a reference are each a link it
+    cannot see whole. A bracket in a link's text and a parenthesis in its
+    destination need no rule of their own: LINK_TARGET_RE matches neither, so
+    such a link stays in the residue with its "](" intact. When the reader
+    cannot read a link whole, it says so and the caller refuses the text
+    rather than vouching for a link it never read.
 
     Returns (targets, unreadable).
     """
@@ -182,8 +196,7 @@ def link_targets(text):
                   or LINK_LIKE_RE.search(residue) is not None
                   or ESCAPED_BRACKET_RE.search(text) is not None
                   or REFERENCE_LINK_RE.search(text) is not None
-                  or LINK_DEFINITION_RE.search(text) is not None
-                  or any(PAREN_RE.search(target) for target in targets))
+                  or LINK_DEFINITION_RE.search(text) is not None)
     return targets, unreadable
 
 
