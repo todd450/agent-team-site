@@ -130,6 +130,15 @@ READABLE = [
     (f"[the issue]({REPO_PREFIX}/issues/27) and [the site]({PAGES_PREFIX}/),",
      [f"{REPO_PREFIX}/issues/27", f"{PAGES_PREFIX}/"]),
     ("A bracketed aside [like this one] that links nowhere.", []),
+    # A dot in ordinary prose is not a host: the rule is a dot with no space
+    # before it and two letters after it, and a figure, an abbreviation and a
+    # version number are none of them that shape. These are what the link-like
+    # rule must not cost a fact, so a rule widened to close a hole cannot
+    # quietly start refusing the page's own sentences.
+    ("Costs 1.5 million, in 8 days.", []),
+    ("Read e.g. the plan, i.e. the issue.", []),
+    ("Running version 1.2.3 now.", []),
+    ("Recorded 26 Oct 2026. Figures hold.", []),
     # A filename or a host inside backticks: a renderer quotes it as code and
     # links nothing, so there is no destination to find and nothing to refuse.
     ("Run `check.sh`, then read `content/facts.json`.", []),
@@ -187,6 +196,24 @@ UNREADABLE = [
      "www. host in the text to find"),
     ("See agents.io/x for detail.", "the same on a two-letter top-level domain"),
     ("Notes at notes.co.uk/x.", "the same on a two-level one"),
+    # A host is not written in Latin letters everywhere, and a renderer reads
+    # one that is not: it autolinks the host and puts its punycode in the href,
+    # so the address on the page is not even the string the reader saw. A fact
+    # citing a Japanese or a Russian source, written the way it is written
+    # there, is this text -- which is why the rule is about the shape of a
+    # host and not about which letters a host is spelled in.
+    ("Recorded 26 Oct 2026; figures at 日本.com/steal.",
+     "an autolink to http://xn--wgv71a.com/steal, over plain http, on a host that is not the "
+     "string in the text at all"),
+    ("See サイト.рф/x for detail.",
+     "the same where the top-level domain is outside Latin too: http://xn--eck7a6c.xn--p1ai/x"),
+    ("Costs are in café.com/steal terms.",
+     "the same on a Latin host with an accent: http://xn--caf-dma.com/steal"),
+    # And the same shape in ASCII, wherever the character before the dot is
+    # not a letter, a digit or a hyphen. A renderer reads a host character as
+    # anything that is not punctuation or a space, so a symbol counts.
+    ("See 1c$.sh now.", "an autolink to http://1c$.sh, on a host ending in a symbol"),
+    ("Served from ~.tc now.", "the same on a host that is one symbol: http://~.tc"),
     ("Run check.sh before you push.",
      "an autolink to http://check.sh: a filename outside backticks is a host to a renderer, "
      "because 'sh' is a country"),

@@ -82,6 +82,8 @@ reviewer reading the diff both see nothing of, and the list of those was never f
 | `bare-url-on-this-site.json` | a bare address that does land on this site: a fact writes a link as `[text](url)` and in no other form |
 | `bare-www-address.json` | a bare `www.` host, which a renderer autolinks with no scheme in the text at all |
 | `bare-host-in-text.json` | a bare host with no `www.` either, which a renderer autolinks into a plain-`http` address off this site |
+| `bare-host-in-another-script.json` | the same host written in another script, autolinked to a punycode address that is not even the string the reader saw -- a fact citing a Japanese or a Russian source, written the way it is written there |
+| `bare-host-ending-in-a-symbol.json` | the same shape in ASCII, where the character before the dot is a symbol: a renderer reads a host character as anything that is not punctuation or a space |
 | `bare-email-address.json` | a bare email address, which a renderer autolinks as `mailto:` |
 | `reference-style-link.json` | a link written as a reference, whose destination is named in a definition elsewhere, so the reader finds no target to check at all |
 | `character-reference-in-text.json` | a tag spelled `&#60;img …&#62;`, which a renderer decodes into brackets before anything reads the text |

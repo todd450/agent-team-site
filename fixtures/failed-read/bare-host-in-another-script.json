@@ -1,0 +1,22 @@
+{
+  "name": "a bare host written in another script",
+  "why": "A host is not spelled in Latin letters everywhere, and a renderer autolinks one that is not: it puts the host's punycode in the href, so the page carries a plain-http address off this site that is not even the string the reader saw. It needs no attacker -- a fact citing a Japanese or a Russian source, written the way it is written there, is this read. A fact writes a link as [text](url) and in no other form; a host in its prose goes in backticks.",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "writes a link in a form this snapshot does not read",
+  "responses": {
+    "costs": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-26",
+          "figure": "5,410",
+          "unit": "",
+          "lead": "Volume nobody can read.",
+          "claim": "Commits in under five months.",
+          "source": "Recorded 26 Oct 2026; figures at 日本.com/steal."
+        }
+      ]
+    }
+  }
+}

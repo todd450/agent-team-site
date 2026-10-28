@@ -32,6 +32,11 @@
 // skipped and counted -- the gate is the first line, and this is the check on
 // what gets through it.
 //
+// It is a written-down corpus, so it answers for the forms somebody listed and
+// no others: when it held only ASCII it said nothing about a host written in
+// another script, which the gate then let through. Every form added here
+// should be the shape of a class and not one spelling of it.
+//
 // check.sh runs this after `npm ci`. Nothing here ships to the page and
 // nothing here makes a network call.
 
@@ -60,6 +65,18 @@ const RENDERED_FORMS = [
     'a bare host with a real top-level domain, autolinked with no scheme in the text'],
   ['See agents.io/x for detail.', 'the same, on a two-letter top-level domain'],
   ['Notes at notes.co.uk/x.', 'the same, on a two-level one'],
+  // The corpus was all ASCII, and that is exactly what made it blind: a
+  // renderer reads a host character as anything that is not punctuation or a
+  // space, so a host in another script, a Latin host with an accent, and an
+  // ASCII host ending in a symbol are all hosts to it. Each of these is the
+  // bare-host form above written with one character the gate's own class once
+  // did not hold.
+  ['Recorded 26 Oct 2026; figures at 日本.com/steal.',
+    'a bare host in another script, autolinked to a punycode address the reader never saw'],
+  ['See サイト.рф/x for detail.', 'the same, with the top-level domain outside Latin too'],
+  ['Costs are in café.com/steal terms.', 'the same, on a Latin host with an accent'],
+  ['See 1c$.sh now.', 'the same, on an ASCII host whose last character before the dot is a symbol'],
+  ['Served from ~.tc now.', 'the same, on a host that is one symbol'],
   ['Run check.sh before you push.', 'a filename a renderer reads as a host: "sh" is a country'],
   ['Mail steal@attacker.example for detail.', 'an email address, autolinked as mailto:'],
   ['See www.attacker.example/evil for detail.', 'a www host, autolinked with no scheme'],

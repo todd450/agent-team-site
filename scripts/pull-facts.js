@@ -207,13 +207,37 @@ const LINK_TARGET = /\[[^[\]]*\]\(([^()]*)\)/g;
 // tests/render_facts.js is what says so: the renderer itself, run from
 // check.sh, rather than another reading of the spec.
 //
-// No list of top-level domains, because a list is a thing that drifts and the
-// renderers do not agree on one anyway ("check.sh" is a link to markdown-it
-// and text to GitHub). So this is stricter than any of them, and says what a
-// fact may write outside backticks rather than which hosts exist: a filename
-// or a host in a fact goes in `backticks`, where a renderer puts its
-// characters on the page and links nothing.
-const LINK_LIKE = /:\/\/|\/\/|www\.|@|[A-Za-z0-9-]\.[A-Za-z]{2,}/i;
+// What counts as the character before that dot is anything at all but a space
+// and another dot -- the complement, and not a list of the characters hosts
+// are made of. A renderer does not ask which letters a host is spelled in: it
+// takes anything that is not punctuation, a space or a control character as
+// part of a host, so "日本.com/steal" is a host to it, and so is
+// "café.com/steal", "сайт.рф/steal" and the ASCII "1c$.sh" or "~.tc". A class
+// of ASCII letters, digits and hyphens read every one of those as prose and
+// let a renderer put href="http://xn--wgv71a.com/steal" on the page -- an
+// address off this site that is not even the string the reader saw. It needs
+// no attacker either: a fact citing a Japanese or a Russian source, written
+// the way it is written there, is that text.
+//
+// Naming the categories instead -- letters, marks, numbers and symbols, which
+// is what a renderer means by a host character -- closes those and still
+// leaves a residue, because "which category is this code point in" is a
+// question Node and the renderer answer from different editions of Unicode:
+// U+1B4E and U+10100 are punctuation to Node and host characters to
+// markdown-it's tables, so "x᭎.com/steal" autolinks past a category rule.
+// Mirroring another library's tables is the drift this file keeps having to
+// undo, so the rule does not mirror them.
+//
+// No list of top-level domains either, because a list is a thing that drifts
+// and the renderers do not agree on one anyway ("check.sh" is a link to
+// markdown-it and text to GitHub). So this says what a fact may write outside
+// backticks rather than which hosts exist: a filename or a host in a fact
+// goes in `backticks`, where a renderer puts its characters on the page and
+// links nothing. All it costs ordinary prose is the space after a full stop,
+// which a fact wants anyway: "1.5 million", "e.g.", "version 1.2.3" and
+// "61,365 lines, in 8 days" are none of them this shape, and a sentence that
+// is -- "Merged yesterday.No open issue." -- is a typo a renderer autolinks.
+const LINK_LIKE = /:\/\/|\/\/|www\.|@|[^\s.]\.\p{L}{2,}/iu;
 // A backslash before a bracket or a parenthesis: an escape a renderer
 // honours and this reader cannot see, so the two disagree about where a link
 // ends.
