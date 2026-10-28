@@ -28,8 +28,12 @@ What the cases here pin:
   naming that place, and a page it could not write is left exactly as it was.
   Every refusal here is a sentence: a stack trace is a failure of this suite,
   however wrong the thing that caused it was.
-- The facts drive the page: a row added appears in position order with the date
-  the page dates it by, and a row removed disappears.
+- The facts drive the pages: a row added appears in position order with the
+  date the page dates it by, and a row removed disappears from the whole site.
+  Which page a kind of fact lands on is part of what the build decides, so each
+  kind is read off the page that carries it -- the record's entries are on
+  `record/index.html` from issue #29 on, and its own rules are in
+  `tests/test_record.py`.
 - The newest record entry is the one marked "this build", by construction, so
   the page cannot carry two of them.
 - An empty list, one item and far more than the page carries today all render
@@ -83,6 +87,10 @@ KINDS = kinds()
 # page. One entry per kind, so a kind added to the snapshot has to be given a
 # home here before these pass.
 #
+# `page` is the page the site serves that kind on. The record has a page of its
+# own from issue #29 (D6 and P6, decided on #14), so "the facts drive the page"
+# is asked of whichever page a kind lands on rather than of the home page.
+#
 # `date` is where the page shows that kind's dates: a step and a record entry
 # carry their own row's date, a measure's rows are headed by one dated column
 # for the table, and a cost writes its date into its own `source` text.
@@ -92,24 +100,28 @@ KINDS = kinds()
 # what the reader reads does not look for them in the text.
 ROWS = {
     "status_steps": {
+        "page": "index.html",
         "section": "band",
         "row": re.compile(r'<li class="step">.*?</li>', re.DOTALL),
         "date": "row",
         "as_class": ("standing",),
     },
     "costs": {
+        "page": "index.html",
         "section": "costs",
         "row": re.compile(r'<div class="ev">.*?</div>', re.DOTALL),
         "date": "source",
         "as_class": (),
     },
     "measures": {
+        "page": "index.html",
         "section": "measures",
         "row": re.compile(r"<tr\b[^>]*>.*?</tr>", re.DOTALL),
         "date": "column",
         "as_class": ("standing",),
     },
     "record_entries": {
+        "page": "record/index.html",
         "section": "record",
         "row": re.compile(r"<li\b[^>]*>.*?</li>", re.DOTALL),
         "date": "row",
@@ -141,10 +153,17 @@ def section(html, name):
     return match.group(1)
 
 
-def rows_of(html, kind):
-    """Every row of this kind on the page, in document order."""
+def rows_of(site, kind):
+    """Every row of this kind on the page that carries it, in document order.
+
+    `site` is every page a build wrote, by output path, because which page a
+    kind lands on is part of what the build decides: the record's entries are
+    on record/index.html and nowhere else.
+    """
     shape = ROWS[kind]
-    body = section(html, shape["section"])
+    page = shape["page"]
+    assert page in site, f"the build wrote no {page}, which is where {kind} goes"
+    body = section(site[page], shape["section"])
     if kind == "measures":
         body = re.search(r"<tbody>(.*?)</tbody>", body, re.DOTALL).group(1)
     return shape["row"].findall(body)
@@ -299,6 +318,11 @@ class GeneratorTestCase(unittest.TestCase):
     def page(self, root=None, snapshot=None):
         """The home page as the generator writes it."""
         return self.build(root=root, snapshot=snapshot)["index.html"]
+
+    def site(self, root=None, snapshot=None):
+        """Every page the generator writes, by output path -- what a reader of
+        the whole site gets, which is more than one page from issue #29 on."""
+        return self.build(root=root, snapshot=snapshot)
 
 
 class CommittedPageTests(GeneratorTestCase):
@@ -535,13 +559,33 @@ class EveryServedPageTests(GeneratorTestCase):
     def test_a_link_this_site_may_not_carry_is_caught_on_a_page_that_is_not_index(self):
         root = self.site_with_a_second_page(
             "A [beacon](http://evil.test/grab?c=1) and a [trap](javascript:void 0).")
-        found = {name: link_problems(links_on((root / name).read_text(encoding="utf-8")))
+        found = {name: link_problems(name, links_on((root / name).read_text(encoding="utf-8")))
                  for name in served_pages(root)}
         self.assertEqual(found["index.html"], [],
                          "the home page itself carries a link this site may not carry")
         self.assertEqual(len(found["extra/index.html"]), 2,
                          f"a second page's off-site link and its javascript: link are not both "
                          f"refused: {found['extra/index.html']!r}")
+
+    def test_a_relative_link_that_climbs_out_of_the_site_is_caught_on_that_page(self):
+        root = self.site_with_a_second_page("A [way out](../../elsewhere/) here.")
+        page = "extra/index.html"
+        problems = link_problems(page, links_on((root / page).read_text(encoding="utf-8")))
+        self.assertEqual(len(problems), 1,
+                         f"a link that climbs past the site's root from {page} is not refused: "
+                         f"{problems!r}")
+
+    def test_a_relative_link_is_judged_from_the_page_it_is_written_on(self):
+        # A page served from a directory of its own reaches the stylesheets
+        # and the home page by climbing out of that directory, and lands
+        # inside the site; the same addresses written on the home page land
+        # above it. So where a relative link goes is asked of the page that
+        # carries it, not of the characters it starts with.
+        inside = ["../", "../tokens.css"]
+        self.assertEqual(link_problems("extra/index.html", inside), [],
+                         "a page in its own directory cannot reach the site's root")
+        self.assertEqual(len(link_problems("index.html", inside)), len(inside),
+                         "the home page is the site's root, and these leave the site")
 
     def test_an_asset_a_second_page_loads_is_resolved_from_that_page_s_own_url(self):
         # A page at <name>/index.html is served from its own directory, so a
@@ -670,7 +714,7 @@ class CopyValueTests(GeneratorTestCase):
 
 
 class FactTests(GeneratorTestCase):
-    """The snapshot drives the page: every row of every kind, in position
+    """The snapshot drives the pages: every row of every kind, in position
     order, with the date the page dates it by."""
 
     def setUp(self):
@@ -679,13 +723,13 @@ class FactTests(GeneratorTestCase):
     def written(self, snapshot):
         path = self.tmpdir() / "facts.json"
         dump(path, snapshot)
-        return self.page(root=ROOT, snapshot=path)
+        return self.site(root=ROOT, snapshot=path)
 
     def test_every_row_of_every_kind_is_on_the_page_in_position_order(self):
-        html = self.page(root=ROOT)
+        site = self.site(root=ROOT)
         for kind, columns in KINDS.items():
             with self.subTest(kind=kind):
-                rows = rows_of(html, kind)
+                rows = rows_of(site, kind)
                 self.assertEqual(len(rows), len(self.snapshot[kind]),
                                  f"the page shows {len(rows)} {kind} and the snapshot holds "
                                  f"{len(self.snapshot[kind])}")
@@ -721,8 +765,8 @@ class FactTests(GeneratorTestCase):
                 gone = snapshot[kind].pop(1)
                 for index, row in enumerate(snapshot[kind], start=1):
                     row["position"] = index
-                html = self.written(snapshot)
-                self.assertEqual(len(rows_of(html, kind)), len(snapshot[kind]))
+                site = self.written(snapshot)
+                self.assertEqual(len(rows_of(site, kind)), len(snapshot[kind]))
                 left = [row[column] for row in snapshot[kind] for column in columns[2:]]
                 told = 0
                 for column in shown_columns(kind, columns, 1):
@@ -732,7 +776,10 @@ class FactTests(GeneratorTestCase):
                     if gone[column] in left or len(gone[column]) < 20:
                         continue
                     told += 1
-                    self.assertNotIn(plain(gone[column]), text_of(html),
+                    # Read off every page the build wrote, not just the one
+                    # that kind belongs on: a row taken out of the snapshot is
+                    # gone from the site, wherever it used to be shown.
+                    self.assertNotIn(plain(gone[column]), text_of("\n".join(site.values())),
                                      f"a {kind} row taken out of the snapshot is still shown")
                 self.assertTrue(told, f"nothing in the {kind} row removed was its own to check")
 
@@ -745,15 +792,16 @@ class FactTests(GeneratorTestCase):
             if ROWS[kind]["date"] == "source":
                 for row in snapshot[kind]:
                     row["source"] = "Recorded 7 Sep 2026"
-        html = self.written(snapshot)
+        site = self.written(snapshot)
         for kind in KINDS:
             with self.subTest(kind=kind):
                 if ROWS[kind]["date"] == "column":
-                    self.assertIn("7 Sep 2026", section(html, ROWS[kind]["section"]),
+                    self.assertIn("7 Sep 2026",
+                                  section(site[ROWS[kind]["page"]], ROWS[kind]["section"]),
                                   f"the {kind} table is not headed by the day its rows are "
                                   f"true as of")
                     continue
-                for index, row in enumerate(rows_of(html, kind)):
+                for index, row in enumerate(rows_of(site, kind)):
                     self.assertIn("7 Sep 2026", text_of(row),
                                   f"{kind} row {index} on the page carries no date")
 
@@ -805,8 +853,8 @@ class InlineFormTests(GeneratorTestCase):
         snapshot["record_entries"] = [dict(snapshot["record_entries"][0], entry=text)]
         path = self.tmpdir() / "facts.json"
         dump(path, snapshot)
-        html = self.page(root=ROOT, snapshot=path)
-        return re.search(r"<p>(.*?)</p>", rows_of(html, "record_entries")[0], re.DOTALL).group(1)
+        site = self.site(root=ROOT, snapshot=path)
+        return re.search(r"<p>(.*?)</p>", rows_of(site, "record_entries")[0], re.DOTALL).group(1)
 
     def test_nothing_in_a_fact_but_the_two_inline_forms_becomes_markup(self):
         rendered = self.rendered_record_entry(self.ATTACK)
@@ -841,10 +889,10 @@ class InlineFormTests(GeneratorTestCase):
         # Both read the same two inline forms, and the puller is the gate on
         # what may be in the snapshot at all. If they drift, a destination the
         # puller checked is not the destination that reaches the page.
-        html = self.page(root=ROOT)
+        site = self.site(root=ROOT)
         snapshot = load(SNAPSHOT)
         for kind, columns in KINDS.items():
-            rows = rows_of(html, kind)
+            rows = rows_of(site, kind)
             for index, (rendered, row) in enumerate(zip(rows, snapshot[kind])):
                 with self.subTest(row=f"{kind}[{index}]"):
                     expected = [target
@@ -860,10 +908,10 @@ class InlineFormTests(GeneratorTestCase):
         # character for character. A span paired some other way, a character
         # dropped, or anything invented would show up here -- and what a real
         # renderer makes of those backticks is check.sh's markdown-it run.
-        html = self.page(root=ROOT)
+        site = self.site(root=ROOT)
         snapshot = load(SNAPSHOT)
         for kind, (column, pattern) in RICH.items():
-            for index, (rendered, row) in enumerate(zip(rows_of(html, kind), snapshot[kind])):
+            for index, (rendered, row) in enumerate(zip(rows_of(site, kind), snapshot[kind])):
                 with self.subTest(value=f"{kind}[{index}].{column}"):
                     found = pattern.search(rendered)
                     self.assertIsNotNone(found, f"no {column} in the row the page shows")
@@ -887,11 +935,11 @@ class EmptyAndOneTests(GeneratorTestCase):
     def test_every_scenario_renders_a_page(self):
         for path in self.scenarios():
             with self.subTest(scenario=path.name):
-                html = self.page(root=ROOT, snapshot=path)
+                site = self.site(root=ROOT, snapshot=path)
                 snapshot = load(path)
                 for kind in KINDS:
-                    self.assertEqual(len(rows_of(html, kind)), len(snapshot[kind]),
-                                     f"{path.name}: the page does not show every {kind}")
+                    self.assertEqual(len(rows_of(site, kind)), len(snapshot[kind]),
+                                     f"{path.name}: the site does not show every {kind}")
 
     def test_the_sections_are_all_there_however_many_rows_there_are(self):
         for path in self.scenarios():

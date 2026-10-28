@@ -10,9 +10,12 @@
 <!-- modern-normalize first, tokens.css last: the reset is only a floor the
      page stands on, and every colour, font and spacing above it comes from a
      token (issue #26). The reset is a file in this repo, so the page asks
-     nobody else for bytes when it loads. -->
-<link rel="stylesheet" href="modern-normalize.css">
-<link rel="stylesheet" href="tokens.css">
+     nobody else for bytes when it loads. Both are addressed from the page's
+     own URL, because a page served from a directory of its own (/record/) is
+     not served from the site's root: a bare "tokens.css" on it would ask the
+     site for record/tokens.css, which is not there (issue #29). -->
+<link rel="stylesheet" href="{{page.toRoot}}modern-normalize.css">
+<link rel="stylesheet" href="{{page.toRoot}}tokens.css">
 <style>
   /* No box-sizing, -webkit-text-size-adjust or body margin reset here:
      modern-normalize above covers all three. */

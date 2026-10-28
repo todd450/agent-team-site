@@ -80,13 +80,18 @@ def links_on(html):
     return parser.found
 
 
-def link_problems(links):
-    """Why these addresses are not ones a page of this site may carry, or []
-    when they are.
+def link_problems(page, links):
+    """Why these addresses on this page are not ones a page of this site may
+    carry, or [] when they are.
 
     Every absolute one goes to the puller's allowlist in a single call: it
     asks where a browser would land, so an address that begins with this
     repo's own and then walks out of it on a ".." segment is not inside it.
+
+    A relative one is judged from `page`'s own URL, because that is what a
+    browser resolves it against: `../tokens.css` on a page served from
+    `record/` is this site's own stylesheet, and the same address on the home
+    page is a file above the site.
     """
     absolute = [link for link in links if link.startswith(ABSOLUTE)]
     allowed = dict(zip(absolute, allowed_links(absolute))) if absolute else {}
@@ -99,16 +104,18 @@ def link_problems(links):
         elif link in allowed:
             if not allowed[link]:
                 problems.append(f"link leaves this repo's public pages: {link!r}")
-        # A relative link must stay inside this site: no "../" escape, and no
-        # leading "/" either -- this site is served from a project
-        # subdirectory on GitHub Pages
+        # A relative link must stay inside this site: it may walk up out of
+        # the directory its own page is served from, which is how a page at
+        # `record/` reaches the stylesheets and the home page, but not up out
+        # of the site. No leading "/" either -- this site is served from a
+        # project subdirectory on GitHub Pages
         # (todd450.github.io/founding-agents-site/), so a root-relative link
         # such as "/about" resolves to todd450.github.io/about, outside the
         # site entirely, and 404s on the nightly link check.
-        elif link.startswith(".."):
-            problems.append(f"relative link escapes the site: {link!r}")
         elif link.startswith("/"):
             problems.append(f"root-relative link leaves the project site: {link!r}")
+        elif served_from(page, link).startswith(".."):
+            problems.append(f"relative link on {page} escapes the site: {link!r}")
     return problems
 
 

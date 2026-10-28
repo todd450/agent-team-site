@@ -555,6 +555,19 @@ function build(options = {}) {
     const copy = { ...common, ...own };
     const copyFiles = `content/copy/en/common.json or content/copy/en/${name}.json`;
 
+    // Where this page is served from, and so what a relative address written
+    // on it means: the home page is served at the site's root and every other
+    // page from a directory of its own (P6, decided on #14). The way back up
+    // to the root is a value, so the stylesheets the layout links and a link
+    // from a page to the home page are written from the page's own URL
+    // instead of from the home page's: without it a page served at /record/
+    // would ask the site for /record/tokens.css, which is not there.
+    const target = name === 'index' ? 'index.html' : path.join(name, 'index.html');
+    const pageValues = {
+      'page.toRoot': '../'.repeat(target.split('/').length - 1),
+    };
+    const values = { ...siteValues, ...dates, ...pageValues };
+
     const partials = (partialName) => {
       if (partialName === 'page') return tidy(readFile(path.join(pagesDir, file)));
       return tidy(readFile(path.join(root, 'templates', 'partials', `${partialName}.html`)));
@@ -568,8 +581,7 @@ function build(options = {}) {
     // rendered, so they are checked as it renders.
     const settled = outsideEach(template, where);
     for (const named of new Set([...namesIn(settled), ...ifNamesIn(settled)])) {
-      if (!Object.hasOwn(siteValues, named) && !Object.hasOwn(dates, named)
-          && !Object.hasOwn(copy, named)) {
+      if (!Object.hasOwn(values, named) && !Object.hasOwn(copy, named)) {
         fail(`${where} calls {{${named}}}, which is neither a value the generator works out nor `
           + `a key in ${copyFiles}`);
       }
@@ -584,15 +596,14 @@ function build(options = {}) {
     for (const key of Object.keys(common)) if (names.has(key)) calledInCommon.add(key);
 
     const scope = {
-      values: { ...siteValues, ...dates },
+      values,
       copy,
       copyFiles,
       rows: (kind, at) => rowsOf(snapshot, kind, at, copy['record.thisBuild'],
-        [...Object.keys(siteValues), ...Object.keys(dates)]),
+        Object.keys(values)),
     };
     const html = render(template, scope, where);
 
-    const target = name === 'index' ? 'index.html' : path.join(name, 'index.html');
     const pageFile = path.join(out, target);
     if (options.check) {
       let committed = null;

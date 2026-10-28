@@ -41,6 +41,5 @@
 
   "record.heading": "The record of this build",
   "record.intro": "Written as it happens, not afterwards. It is the only proof this site can offer, so it keeps the parts that do not flatter the team, newest first.",
-  "record.when": "{{date}} · {{mark}}",
-  "record.thisBuild": "this build"
+  "record.link": "Read the record, entry by entry"
 }
