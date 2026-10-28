@@ -37,7 +37,7 @@ from pathlib import Path
 # The puller's own rules, asked through node. Nothing in this file reimplements
 # one.
 from rules import (allowed_links, day_of_the_pull, kinds, links_in, markup_in,
-                   refused_in, snapshot_problems)
+                   optional_columns, refused_in, snapshot_problems)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
@@ -131,6 +131,19 @@ def sql_literals(block):
 
 def load(path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def sentence_in(body):
+    """What a store that refused a read said about it, when it said anything a
+    reader could act on: PostgREST answers a JSON object and puts the useful
+    part in `message`. A page of HTML from a proxy in front of it has no such
+    field, and then there is no one sentence to look for."""
+    try:
+        answer = json.loads(body)
+    except (TypeError, ValueError):
+        return None
+    message = answer.get("message") if isinstance(answer, dict) else None
+    return message if isinstance(message, str) and message.strip() else None
 
 
 def day_after(day):
@@ -273,6 +286,18 @@ class HandEditedSnapshotTests(unittest.TestCase):
     def test_a_fact_dated_after_the_day_of_the_pull_is_refused(self):
         self.assert_refused(lambda facts: facts["record_entries"][0].update(as_of="2099-01-01"),
                             "is dated after the day of the pull")
+
+    def test_an_optional_column_spelled_null_is_refused_by_its_own_name(self):
+        # The repair this class is here for, done the obvious way: a row
+        # copied out of the store's own REST answer, which spells an empty
+        # optional column `null` where the snapshot spells it "". The reason
+        # has to name the kind, the row and the column, because that is the
+        # one edit to make -- a reason naming some other rule sends whoever is
+        # repairing the file to change something that is not wrong.
+        for table, column in sorted(optional_columns()):
+            with self.subTest(column=f"{table}[0].{column}"):
+                self.assert_refused(lambda facts, t=table, c=column: facts[t][0].update({c: None}),
+                                    f"{table}[0].{column}")
 
     def test_a_fact_dated_after_the_day_the_snapshot_was_pulled_is_refused(self):
         # The repair this class is here for: a stale fact fixed by hand and
@@ -658,6 +683,38 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
                                   f"{path.name} no longer fails on the rule it tests")
                 self.assertEqual(list(tmp.iterdir()), [out],
                                  "a failed pull left a temporary file behind")
+
+    def test_a_read_the_store_refuses_says_what_the_store_said(self):
+        # A refusal has to be actionable, and the status number alone is the
+        # one thing nobody can act on: 400 is a column this read asked for and
+        # the table does not have, 404 a table renamed, 401 a key rotated --
+        # the likeliest ways this pull ever breaks -- and which of them it is,
+        # is in the body and nowhere else. This is also the only moment anyone
+        # is told, so every scenario whose store refuses a read is held to it,
+        # including one added to the folder after this was written.
+        out = self.tmpdir() / "facts.json"
+        asked = 0
+        for path in scenarios():
+            refused = {table: response
+                       for table, response in load(path).get("responses", {}).items()
+                       if response.get("status") not in (None, 200)}
+            if not refused:
+                continue
+            with self.subTest(scenario=path.name):
+                result = self.run_puller(path, out)
+                self.assertNotEqual(result.returncode, 0)
+                for table, response in refused.items():
+                    self.assertIn(table, result.stderr,
+                                  "a refusal must name the table that was read")
+                    self.assertIn(str(response["status"]), result.stderr,
+                                  "a refusal must name the status the store answered")
+                    said = sentence_in(response.get("body"))
+                    if said is not None:
+                        self.assertIn(said, result.stderr,
+                                      "a refusal must carry the sentence the store answered "
+                                      "with, which is the only thing that says what is wrong")
+                    asked += 1
+        self.assertTrue(asked, "no scenario in the folder has the store refuse a read")
 
     def test_a_pull_clears_the_working_file_a_killed_run_left_behind(self):
         # A pull killed between writing its working file and renaming it over

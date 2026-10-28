@@ -1,7 +1,13 @@
 {
   "name": "a 404 for one table",
-  "why": "The table was renamed, or the key may no longer read it. Three tables out of four is not a snapshot.",
+  "why": "The table was renamed, or the key may no longer read it. Three tables out of four is not a snapshot, and the store's own sentence is what says which of the two it was.",
   "outcome": "fail",
   "runs": 1,
-  "responses": { "status_steps": { "status": 404, "body": "{\"message\":\"relation does not exist\"}" } }
+  "fails": "Could not find the table 'public.step_rows' in the schema cache",
+  "responses": {
+    "status_steps": {
+      "status": 404,
+      "body": "{\"code\":\"PGRST205\",\"message\":\"Could not find the table 'public.step_rows' in the schema cache\"}"
+    }
+  }
 }

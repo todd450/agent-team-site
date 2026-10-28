@@ -8,6 +8,10 @@ reads came back whole and usable.** Anything else leaves the snapshot exactly as
 non-zero, so a Supabase outage, a half-sent answer or a bad row can never half-write the snapshot,
 freeze a merge, or put something on the page that was never reviewed.
 
+A read the store refuses carries the store's own sentence into the reason the pull gives: the status
+number alone is the one thing nobody can act on, and a 400, a 404 and a 401 are the three likeliest
+ways this pull ever breaks.
+
 `rows.json` holds one good read of all four tables. Each scenario file names only what it changes;
 every other table answers with those rows. `tests/test_facts.py` runs them through
 `tests/stub_pull.js`, which hands the puller a stubbed `fetch` and makes the real one throw, so the
@@ -33,6 +37,8 @@ reviewer reading the diff both see nothing of, and the list of those was never f
 | `server-error.json` | a 500 from the API |
 | `not-found.json` | a 404: the table was renamed or the key may no longer read it |
 | `unauthorized.json` | a 401: the key was rotated or revoked |
+| `column-not-in-the-table.json` | a 400: a column was renamed or dropped, so the read asks for one the table does not have |
+| `error-page-instead-of-rows.json` | a 502 HTML page from a proxy in front of the store, with no `message` field to lift and terminal escapes in it |
 | `truncated-body.json` | 200, but the body is cut off mid-JSON |
 | `partial-rows.json` | 200 and valid JSON, but fewer rows than the count header promises |
 | `empty-table.json` | 200 and an empty table, which would silently empty a section of the page |

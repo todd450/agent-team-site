@@ -440,6 +440,62 @@ function totalFromContentRange(header, table) {
   return Number(total[1]);
 }
 
+// The longest the store's own sentence may run inside a reason. Long enough
+// for the ones that matter ("Could not find the table 'public.cost_rows' in
+// the schema cache" is 62 characters) and short enough that a page of HTML
+// cannot bury the line that says which table failed.
+const SAID_LENGTH = 200;
+
+// What the store said about a read it refused, in one line.
+//
+// A refusal has to be actionable, and the status number alone is the one thing
+// nobody can act on: 400 is a column this read asked for and the table does
+// not have, 404 a table renamed, 401 a key rotated -- the three most likely
+// ways this pull ever breaks -- and which of them it is, is in the body and
+// nowhere else. This is also the only moment anyone is told, so the body is
+// read before the reason is given rather than thrown away.
+//
+// PostgREST answers {"code": ..., "message": ..., "details": ..., "hint": ...}
+// and says the useful part in message; a proxy in front of it answers an HTML
+// page with no message at all, and then what the page says is still the only
+// clue there is. Whatever is kept goes through the same character rule a fact
+// does, so a body full of line breaks or terminal escapes cannot rewrite the
+// reason a reader sees in their terminal.
+function oneLine(said) {
+  return said.replace(REFUSED_CHARACTER, ' ').replace(/\s+/gu, ' ').trim();
+}
+
+function saidBy(body) {
+  let said = body;
+  try {
+    const answer = JSON.parse(body);
+    if (answer !== null && typeof answer === 'object' && !Array.isArray(answer)) {
+      const sentences = ['message', 'details', 'hint']
+        .map((field) => answer[field])
+        .filter((value) => typeof value === 'string' && value.trim() !== '');
+      if (sentences.length > 0) said = sentences.join(' -- ');
+    }
+  } catch {
+    // Not JSON at all, so the body is the sentence, such as it is.
+  }
+  const line = oneLine(typeof said === 'string' ? said : body);
+  if (line === '') return '';
+  return `: ${line.length > SAID_LENGTH ? `${line.slice(0, SAID_LENGTH)}...` : line}`;
+}
+
+// The body of a read that was refused. It is wanted for the reason only, so a
+// body that never arrives costs the reason its sentence and nothing more: the
+// status is already known and the read has already failed.
+async function saidByResponse(response) {
+  let body;
+  try {
+    body = await response.text();
+  } catch {
+    return '';
+  }
+  return saidBy(body);
+}
+
 async function readTable(kind, { fetchImpl, baseUrl, key, timeoutMs, day }) {
   const url = new URL(`/rest/v1/${kind.table}`, baseUrl);
   url.searchParams.set('select', kind.columns.join(','));
@@ -460,7 +516,8 @@ async function readTable(kind, { fetchImpl, baseUrl, key, timeoutMs, day }) {
     fail(`${kind.table}: the read did not come back (${error.message})`);
   }
   if (response.status !== 200) {
-    fail(`${kind.table}: the read answered ${response.status}, not 200`);
+    fail(`${kind.table}: the read answered ${response.status}, not 200`
+      + `${await saidByResponse(response)}`);
   }
 
   let body;
@@ -521,11 +578,33 @@ function checkSnapshot(snapshot, options = {}) {
         fail(`${where} does not carry exactly ${kind.columns.join(', ')}, in that order: `
           + `${Object.keys(row).join(', ')}`);
       }
+      // An optional column spelled null, which is the one difference between
+      // a row as the store answers it and a row as the snapshot holds it: a
+      // read turns an empty optional column into "" on the way in, so a row
+      // copied out of the store's own REST answer by hand -- which is how a
+      // stale fact gets repaired until the generator lands -- arrives one
+      // edit short. It is named here, by its own column, because the rules
+      // below cannot: they are asked about the row as checked, where the null
+      // is already a "", so the only thing left for them to report is some
+      // other rule -- and that sends whoever is repairing the file to change
+      // what is not wrong. Every other column has no empty spelling at all,
+      // and a null in one is refused for not being text.
+      for (const column of kind.optional || []) {
+        if (row[column] === null) {
+          fail(`${where}.${column} is null: an optional column a fact has nothing to put in is `
+            + '"" in the snapshot, not null -- the store answers null and a pull writes "", so a '
+            + "row copied out of the store's own answer needs that one change");
+        }
+      }
     });
     // checkRows puts the rows in position order and refuses a gap or a
     // repeat, so rows a reader would see out of order are the ones it moved.
+    // Positions, not the rows themselves: every other difference between a
+    // row as it is stored and a row as it was checked has its own rule and
+    // its own reason above, and comparing the whole row would report this one
+    // instead of that one.
     const checked = checkRows(kind, rows, day);
-    if (serialise(checked) !== serialise(rows)) {
+    if (checked.map((row) => row.position).join(',') !== rows.map((row) => row.position).join(',')) {
       fail(`${kind.table} is not stored in position order, so the page would read in one order `
         + 'and the snapshot in another');
     }
