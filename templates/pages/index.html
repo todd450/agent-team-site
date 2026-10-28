@@ -1,0 +1,33 @@
+{{! The home page: the sections, in the order a reader meets them. Four of
+    them are one row per fact and live in templates/partials/; the two in the
+    middle are prose, so their wording is keys and their shape is here. }}
+{{>band}}
+
+{{>costs}}
+
+  <section class="flow">
+    <h2>{{flow.heading}}</h2>
+    <ol class="rail">
+      <li><span class="who">{{flow.productLead.who}}</span><span class="does">{{&flow.productLead.does}}</span></li>
+      <li><span class="who">{{flow.designer.who}}</span><span class="does">{{&flow.designer.does}}</span></li>
+      <li><span class="who">{{flow.founder.who}}</span><span class="does">{{&flow.founder.does}}</span></li>
+      <li><span class="who">{{flow.builder.who}}</span><span class="does">{{&flow.builder.does}}</span></li>
+      <li><span class="who">{{flow.reviewer.who}}</span><span class="does">{{&flow.reviewer.does}}</span></li>
+      <li><span class="who">{{flow.integrator.who}}</span><span class="does"><span class="gate">{{flow.integrator.gate}}</span> {{&flow.integrator.does}}</span></li>
+      <li><span class="who">{{flow.opsWatch.who}}</span><span class="does">{{&flow.opsWatch.does}}</span></li>
+    </ol>
+    <p class="note">{{&flow.note}}</p>
+  </section>
+
+  <section class="limits">
+    <h2>{{limits.heading}}</h2>
+    <div class="limits-box">
+      <h3>{{limits.named}}</h3>
+      <p>{{&limits.body}}</p>
+      <p class="note">{{&limits.note}}</p>
+    </div>
+  </section>
+
+{{>measures}}
+
+{{>record}}

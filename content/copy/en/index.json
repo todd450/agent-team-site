@@ -1,0 +1,46 @@
+{
+  "headline": "An agent team that proposes, builds and merges one change at a time.",
+  "lede": "This site is the team's test bed, not a launch. The plugin that does the work is private, so there is nothing here to install. The site exists to give `propose` and `build` real changes to run on, in public, where every claim has to survive a reader who can check it.",
+
+  "band.heading": "Status",
+  "band.verdict": "No open red issue. Nothing is blocked.",
+  "band.stamp": "Status as of {{dates.status}} · written by hand from [this repo's issues](https://github.com/todd450/founding-agents-site/issues) and [merged pull requests](https://github.com/todd450/founding-agents-site/pulls?q=is%3Apr+is%3Amerged), which anyone can read.",
+  "step.label": "Step {{position}}",
+  "step.state": "{{state}} · {{date}}",
+
+  "costs.heading": "The four costs",
+  "costs.intro": "Each one is real in one founder's history, counted in that founder's own repositories. The record that counted them lives in a private repo, so these carry a date and no link: a link into a private repo answers 404 to the nightly check and freezes every merge.",
+
+  "flow.heading": "How a change flows",
+  "flow.productLead.who": "Product lead",
+  "flow.productLead.does": "Writes the brief: who it is for, the appetite, the no-gos.",
+  "flow.designer.who": "Designer",
+  "flow.designer.does": "Storyboards the journey and mocks up two or three options at different stars.",
+  "flow.founder.who": "Founder",
+  "flow.founder.does": "Gets one queue item that fits one sitting, and picks.",
+  "flow.builder.who": "Builder",
+  "flow.builder.does": "Builds one decided issue, in its own worktree.",
+  "flow.reviewer.who": "Reviewer",
+  "flow.reviewer.does": "Reads the diff and the rendered screens against the brief.",
+  "flow.integrator.who": "Integrator",
+  "flow.integrator.gate": "The only role that merges.",
+  "flow.integrator.does": "Merges nothing while a `red` issue is open.",
+  "flow.opsWatch.who": "Ops watch",
+  "flow.opsWatch.does": "Every night, checks the Pages deploy is green and every link on the site resolves. A failure opens one `red` issue; the next green run closes it.",
+  "flow.note": "The check is in this repo and can be read: [check_site.py](https://github.com/todd450/founding-agents-site/blob/main/.github/ops-watch/check_site.py), [ops-watch.yml](https://github.com/todd450/founding-agents-site/blob/main/.github/workflows/ops-watch.yml).",
+
+  "limits.heading": "What this is not",
+  "limits.named": "No evidence that anyone besides the founder wants this.",
+  "limits.body": "There is none yet, and this site cannot produce any. The plugin repo is private, so there is nothing to install, no sign-up and no analytics. Any claim here that the site tests demand would be false, and any measure built on outside users would be unmeasurable.",
+  "limits.note": "That question stays open. It is not what this bet answers.",
+
+  "measures.heading": "How we will know",
+  "measures.caption": "The site's job is to exercise the team, so the measures are the team's.",
+  "measures.measure": "Measure",
+  "measures.bar": "Bar",
+
+  "record.heading": "The record of this build",
+  "record.intro": "Written as it happens, not afterwards. It is the only proof this site can offer, so it keeps the parts that do not flatter the team, newest first.",
+  "record.when": "{{date}} · {{mark}}",
+  "record.thisBuild": "this build"
+}

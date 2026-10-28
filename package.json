@@ -3,6 +3,7 @@
   "private": true,
   "description": "Development-only checks for this site. Nothing here ships to the page, which stays plain HTML and CSS; these are the standard tools check.sh runs on every pull request.",
   "scripts": {
+    "build": "node scripts/generate.js",
     "facts:pull": "node scripts/pull-facts.js"
   },
   "devDependencies": {

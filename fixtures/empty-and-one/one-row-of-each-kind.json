@@ -1,0 +1,41 @@
+{
+  "pulled_at": "2026-10-27",
+  "status_steps": [
+    {
+      "position": 1,
+      "as_of": "2026-10-24",
+      "name": "main requires a pull request",
+      "state": "Done",
+      "detail": "The only step there is, so the band draws one column of steps beside its verdict."
+    }
+  ],
+  "costs": [
+    {
+      "position": 1,
+      "as_of": "2026-10-24",
+      "figure": "61,365",
+      "unit": "lines, in 8 days",
+      "lead": "The one cost.",
+      "claim": "A cost with a unit beside its figure, so the small tail is drawn.",
+      "source": "Recorded 24 Oct 2026"
+    }
+  ],
+  "measures": [
+    {
+      "position": 1,
+      "as_of": "2026-10-24",
+      "label": "Merges not made by the integrator",
+      "bar": "0",
+      "current": "0",
+      "standing": "hit"
+    }
+  ],
+  "record_entries": [
+    {
+      "position": 1,
+      "as_of": "2026-10-24",
+      "headline": "the only entry there is",
+      "entry": "One entry, which is also the newest, so it is the entry the mark goes on and there is no second one for it to be confused with."
+    }
+  ]
+}

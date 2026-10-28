@@ -1,0 +1,21 @@
+{{! The status band: a verdict with its dot and a dated stamp, then one entry
+    per build step from the snapshot's status_steps, in position order. A
+    step's dot and its running class are worked out from its own state, so the
+    two can never disagree. }}
+  <section class="band" aria-label="{{band.heading}}">
+    <h2>{{band.heading}}</h2>
+    <div class="band-head">
+      <span class="verdict"><span class="dot dot-green"></span>{{band.verdict}}</span>
+      <span class="stamp">{{&band.stamp}}</span>
+    </div>
+    <ol class="steps">
+      {{#each status_steps}}
+      <li class="step">
+        <span class="step-top"><span class="dot {{dot}}"></span>{{step.label}}</span>
+        <span class="step-name">{{name}}</span>
+        <span class="step-state{{stateClass}}">{{step.state}}</span>
+        <span class="step-check">{{&detail}}</span>
+      </li>
+      {{/each}}
+    </ol>
+  </section>
