@@ -6,6 +6,12 @@ does not have. Each check is red only when someone has to act.
 
 - **Address:** https://todd450.github.io/founding-agents-site/
 - **Weekly budget:** (not set yet; the founder sets one after the first ten measured changes)
+- **The one metric:** (not set yet; the site has no outside readers, which #1 says is not what this
+  bet answers)
+- **Other evidence of use:** none
+
+The check-backs on shipped briefs read the last two. The routine reaches only this repo, so a
+number kept elsewhere counts once the founder copies it in.
 
 ## Checks
 
