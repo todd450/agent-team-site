@@ -1,5 +1,5 @@
-"""Tests for the four sections at the foot of the page: how a change flows,
-what this is not, the measures table and the record of this build.
+"""Tests for three of the sections at the foot of the home page: how a change
+flows, what this is not, and the measures table.
 
 - The flow section: a labelled list of roles, each with a name and a
   description, and it points at the ops-watch check in this repo so a reader
@@ -8,10 +8,11 @@ what this is not, the measures table and the record of this build.
   prose and no link.
 - The measures table: one row per measure, each with a bar and a current
   figure, headed by a dated column.
-- The record: one entry per event, each with a dated "when" and some text,
-  newest first -- checked by parsing every date and asserting the list never
-  goes forward in time as it's read top to bottom -- with exactly one entry
-  marked "this build", the newest.
+
+Moved out in issue #29: the record's own rules, to tests/test_record.py. The
+record has a page of its own at /record/ (D6 and P6, decided on #14), and the
+home page's record section is a pointer at it -- so what the entries have to
+be, and that the home page lists none of them, are that page's tests to make.
 
 Dropped in issue #12: the tests that read the page's CSS as text to check
 each block of prose was capped to the measure (a real browser now measures
@@ -24,7 +25,6 @@ is the one thing this suite has to take on trust.
 
 import re
 import unittest
-from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -213,62 +213,6 @@ class MeasuresSectionTests(unittest.TestCase):
             with self.subTest(extra=extra):
                 with self.assertRaises(AssertionError):
                     self.check_rows(body + extra)
-
-
-class RecordSectionTests(unittest.TestCase):
-    def setUp(self):
-        self.html = read(INDEX_HTML)
-        self.record = section(self.html, "record")
-
-    @staticmethod
-    def _parse_date(text):
-        day, month, year = DATE_RE.search(text).groups()
-        return datetime.strptime(f"{day} {month} {year}", "%d %b %Y")
-
-    def _li_count(self):
-        return len(LI_OPEN_RE.findall(self.record))
-
-    def test_every_entry_has_a_dated_when_and_some_text(self):
-        li_count = self._li_count()
-        self.assertTrue(li_count, "no record entries found")
-        entries = re.findall(r'<span class="when">(.*?)</span>\s*<p>(.*?)</p>',
-                              self.record, re.DOTALL)
-        self.assertEqual(len(entries), li_count,
-                          f"expected every one of the {li_count} <li> entries to produce a "
-                          f"dated when and some text, got {len(entries)}")
-        for when, body in entries:
-            self.assertRegex(when, DATE_RE, f"record entry has no date: {when!r}")
-            self.assertTrue(strip_tags(body), f"record entry has no text: {when!r}")
-
-    def test_record_is_newest_first(self):
-        li_count = self._li_count()
-        self.assertTrue(li_count, "no record entries found")
-        whens = re.findall(r'<span class="when">(.*?)</span>', self.record, re.DOTALL)
-        self.assertEqual(len(whens), li_count,
-                          f"expected every one of the {li_count} <li> entries to produce a "
-                          f"parsed, dated when, got {len(whens)}")
-        dates = [self._parse_date(when) for when in whens]
-        self.assertEqual(dates, sorted(dates, reverse=True),
-                          "record entries are not in newest-first date order")
-
-    def _entries(self):
-        entries = re.findall(
-            r'<li\b[^>]*>\s*<span class="when">(.*?)</span>\s*<p>(.*?)</p>',
-            self.record, re.DOTALL)
-        self.assertEqual(len(entries), self._li_count(),
-                          "not every record entry parses as a when and a paragraph")
-        return [(strip_tags(when), strip_tags(body)) for when, body in entries]
-
-    def test_only_the_newest_entry_is_marked_this_build(self):
-        # "this build" is the entry for the merge the reader is looking at.
-        # Once a later build adds its own entry the older one has to stop
-        # claiming the label, or the record carries two of them and one is
-        # false.
-        whens = [when.lower() for when, _ in self._entries()]
-        marked = [index for index, when in enumerate(whens) if "this build" in when]
-        self.assertEqual(marked, [0],
-                          f"expected only the newest entry to be marked 'this build', got "
-                          f"entries {marked!r} of {whens!r}")
 
 
 if __name__ == "__main__":

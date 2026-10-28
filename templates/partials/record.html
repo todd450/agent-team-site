@@ -1,16 +1,12 @@
-{{! The record: one entry per row of the snapshot's record_entries, in
-    position order, which is newest first. The newest entry's mark is the
-    "this build" string and every other entry's is its own headline, so the
-    page cannot carry two of them. }}
+{{! The home page's pointer at the record: the heading, the one paragraph and
+    a relative link to the record's own page, which is where every entry is
+    (D6 and P6, decided on #14). The section stays on the home page, so a link
+    into the record area keeps landing somewhere and the page's six sections
+    stay six -- but it lists no entry, because two surfaces showing the same
+    record is two records, and the one a reader lands on first is the one that
+    falls behind. }}
   <section class="record">
     <h2>{{record.heading}}</h2>
     <p class="col">{{&record.intro}}</p>
-    <ol class="record-list">
-      {{#each record_entries}}
-      <li>
-        <span class="when">{{&record.when}}</span>
-        <p>{{&entry}}</p>
-      </li>
-      {{/each}}
-    </ol>
+    <p class="col"><a href="record/">{{record.link}}</a></p>
   </section>

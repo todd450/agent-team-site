@@ -153,7 +153,7 @@ class LinksAllowedTests(unittest.TestCase):
             with self.subTest(page=name):
                 links = links_on(html)
                 self.assertTrue(links, f"expected at least one link on {name}")
-                self.assertEqual(link_problems(links), [],
+                self.assertEqual(link_problems(name, links), [],
                                  f"{name} carries a link this site may not carry")
 
     def test_every_file_each_page_links_in_this_repo_exists(self):

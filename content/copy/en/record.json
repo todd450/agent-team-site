@@ -1,0 +1,10 @@
+{
+  "headline": "The record of this build.",
+  "lede": "Written as it happens, not afterwards. It is the only proof this site can offer, so it keeps the parts that do not flatter the team.",
+
+  "record.heading": "The record",
+  "record.intro": "Every entry the team has written, newest first, each dated by the day it is true as of.",
+  "record.when": "{{date}} · {{mark}}",
+  "record.thisBuild": "this build",
+  "record.back": "Back to the home page"
+}

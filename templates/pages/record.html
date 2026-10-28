@@ -1,0 +1,25 @@
+{{! The record's own page, served at /record/ by record/index.html -- the one
+    URL shape every static host serves identically, with no rewrite config
+    (D6 and P6, decided on #14).
+
+    One entry per row of the snapshot's record_entries, in position order,
+    which is newest first. The newest entry's mark is the "this build" string
+    and every other entry's is its own headline, so the page cannot carry two
+    of them. The home page keeps a pointer at this page and lists no entry, so
+    the record has one surface and cannot fall behind itself.
+
+    The link back to the home page is written from this page's own URL, so the
+    pair works under the github.io subpath and under a domain root alike. }}
+  <section class="record">
+    <h2>{{record.heading}}</h2>
+    <p class="col">{{&record.intro}}</p>
+    <ol class="record-list">
+      {{#each record_entries}}
+      <li>
+        <span class="when">{{&record.when}}</span>
+        <p>{{&entry}}</p>
+      </li>
+      {{/each}}
+    </ol>
+    <p class="note col"><a href="{{page.toRoot}}">{{record.back}}</a></p>
+  </section>

@@ -10,7 +10,10 @@
 <!-- modern-normalize first, tokens.css last: the reset is only a floor the
      page stands on, and every colour, font and spacing above it comes from a
      token (issue #26). The reset is a file in this repo, so the page asks
-     nobody else for bytes when it loads. -->
+     nobody else for bytes when it loads. Both are addressed from the page's
+     own URL, because a page served from a directory of its own (/record/) is
+     not served from the site's root: a bare "tokens.css" on it would ask the
+     site for record/tokens.css, which is not there (issue #29). -->
 <link rel="stylesheet" href="modern-normalize.css">
 <link rel="stylesheet" href="tokens.css">
 <style>
@@ -375,48 +378,7 @@
   <section class="record">
     <h2>The record of this build</h2>
     <p class="col">Written as it happens, not afterwards. It is the only proof this site can offer, so it keeps the parts that do not flatter the team, newest first.</p>
-    <ol class="record-list">
-      <li>
-        <span class="when">26 Oct 2026 · this build</span>
-        <p>Reading the live page after issue #6 merged found three claims on it that were not true. Step 4 still read <span class="num">Running · 1 of 2</span>, though its done condition — one real run of <span class="num">propose</span> on this site's brief — was met by the queue item on <a href="https://github.com/todd450/founding-agents-site/issues/1">issue #1</a>. At 1440px the band's verdict line ended at the exact left edge of the STEP 1 column, because only the step columns carried the gutter and the rule that divide them. And the entry below undercounted its own review at three rounds when it took four. The first two were written in <a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a> and the third in <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>, and all three passed review there: the step tests asked whether a step carried a name, a state, a date and a link, never whether the state was still true, and nothing read the band's CSS at a width or the numbers in the record's own prose. Fixed for <a href="https://github.com/todd450/founding-agents-site/issues/10">issue #10</a> in <a href="https://github.com/todd450/founding-agents-site/pull/11">PR #11</a>, the fourth real site issue through <span class="num">build</span> to merge.</p>
-      </li>
-      <li>
-        <span class="when">26 Oct 2026 · issue #6's review took four rounds</span>
-        <p>Issue #6 filled in the last four sections: how a change flows, what this is not, the measures table and this record. It drops the mockup's open question about the product's name — the rename below settled that before this issue was built — and records the rename here instead. Built in <a href="https://github.com/todd450/founding-agents-site/pull/9">PR #9</a>, which is also the third real site issue through <span class="num">build</span> to merge, closing build step 3 at 3 of 3–5. Its own review took four rounds. The first found the same shape of gap as issue #5's, one issue later — the record's date-order test reported on the entries it could parse rather than on all of them — two of this build's new prose blocks running the full shell width while the paragraph directly above each stayed capped, and nothing checking that the two files the flow section links to are still there to be served, which is the 404 that freezes every merge. The first two fixes were themselves incomplete: the date-order count matched a literal <span class="num">&lt;li&gt;</span>, so an entry carrying a class stayed invisible, and two more prose blocks were left uncapped, four in all. The second round found both again, and the third round found that same literal-tag blind spot in two more tests — the flow rail's role labels and the measures table's rows — and this paragraph undercounting its own prose blocks and its own rounds. All were fixed on the same PR, and a fourth round approved it.</p>
-      </li>
-      <li>
-        <span class="when">26 Oct 2026 · issue #5's review caught its own blind spot</span>
-        <p><a href="https://github.com/todd450/founding-agents-site/pull/8">PR #8</a> filled in the status band and the four costs for <a href="https://github.com/todd450/founding-agents-site/issues/5">issue #5</a>. Its review found that step 3 named only PR #7's merge, though PR #8 was itself a second real merge that would have falsified &quot;1 of 3–5&quot; the moment it landed; that the step test could not tell four copies of the same step apart; and that the live red-line check's only text test was the substring &quot;blocked&quot;, which &quot;Nothing is blocked&quot; also contains. All three were fixed before merge.</p>
-      </li>
-      <li>
-        <span class="when">26 Oct 2026 · the repo and the page both became Founding Agents</span>
-        <p>During issue #4's review the founder renamed this repository from <span class="num">agent-team-site</span> to <span class="num">founding-agents-site</span> and moved its GitHub Pages address to match, settling the mockup's one open question about what this product is called. Repository settings are not public, so this line carries a date and no link.</p>
-      </li>
-      <li>
-        <span class="when">26 Oct 2026 · issue #4 took three rounds of review</span>
-        <p><a href="https://github.com/todd450/founding-agents-site/pull/7">PR #7</a> added the design tokens and the page shell for <a href="https://github.com/todd450/founding-agents-site/issues/4">issue #4</a>. Review found the colour and font checks missed inline <span class="num">style=</span> attributes and extra <span class="num">&lt;style&gt;</span> blocks, the link checks let protocol-relative URLs through, and a page-level override could still smuggle in a literal colour or font while every test passed — each was fixed, then the founder narrowed the suite, dropping a full CSS-linter check that was never in the issue's appetite.</p>
-      </li>
-      <li>
-        <span class="when">26 Oct 2026 · the rule that would have frozen every merge</span>
-        <p>The brief nearly shipped the rule &quot;every claim links to a file or merged PR in the plugin repo.&quot; That repo is private and the nightly check crawls every link with no credentials, so each link would answer 404, open <span class="num">red</span>, and stop the integrator merging anything. Replaced before it reached <a href="https://github.com/todd450/founding-agents-site/issues/1">the brief</a>: claims link to this repo's own public files, PRs and issues, or they carry a date and no link.</p>
-      </li>
-      <li>
-        <span class="when">26 Oct 2026 · the order bent</span>
-        <p><a href="https://github.com/todd450/founding-agents-site/issues/1">This brief</a> was played by hand on 24 Oct, before <span class="num">propose</span> existed as a run. The product lead rewrote it on 26 Oct, so the lane's first real run is a re-run of an already-decided brief. The 24 Oct decision and the 25 Oct change stay in the issue's comments rather than being tidied away.</p>
-      </li>
-      <li>
-        <span class="when">25 Oct 2026 · the premise changed after the decision</span>
-        <p>The site was decided go on 24 Oct with a target of five outside users in four weeks. The plugin repo stayed private, so the target became unmeasurable and the launch page had no reader. The bet was cut to a test bed at one day instead of being kept alive on a target nobody could check.</p>
-      </li>
-      <li>
-        <span class="when">25 Oct 2026 · roles that did not exist yet</span>
-        <p><span class="num">build</span> and <span class="num">propose</span> had run only on throwaway repos. Steps 3 and 4 had no real product to run on, which is the job this site took.</p>
-      </li>
-      <li>
-        <span class="when">24 Oct 2026 · protection worked by surprise</span>
-        <p>Branch protection on <span class="num">main</span> blocked a builder session's push before the builder knew the rule existed. It is the behaviour the team wanted, found the way nobody plans for.</p>
-      </li>
-    </ol>
+    <p class="col"><a href="record/">Read the record, entry by entry</a></p>
   </section>
 
   <footer>
