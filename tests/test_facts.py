@@ -321,6 +321,31 @@ class DayOfThePullTests(unittest.TestCase):
         self.assertEqual(len(set(answered.values())), len(answered),
                          f"these zones are never on the same day: {answered}")
 
+    def test_a_snapshot_pulled_a_day_ahead_of_the_checks_is_not_refused(self):
+        # The other side of the same coin: whoever pulls and whatever checks
+        # are not in the same place. A pull stamps the file with the day where
+        # it was run, and CI runs in UTC, so for the hours their calendars
+        # disagree the stamp is a day the checks have not reached -- and a
+        # check that called that a date from the future would freeze every
+        # merge for those hours. A date is from the future only when no
+        # calendar anywhere has reached it.
+        ahead, behind = "Pacific/Kiritimati", "Pacific/Pago_Pago"
+        snapshot = load(SNAPSHOT)
+        snapshot["pulled_at"] = day_of_the_pull(ahead)
+        self.assertEqual(snapshot_problems(snapshot, zone=behind), [],
+                         f"a snapshot pulled in {ahead} must pass the checks in {behind}")
+
+    def test_a_day_no_calendar_has_reached_is_still_refused(self):
+        # And the rule it must not give away: a stamp or a fact dated beyond
+        # every calendar on Earth is a clock or a typo, whichever zone the
+        # check runs in.
+        ahead = "Pacific/Kiritimati"
+        snapshot = load(SNAPSHOT)
+        snapshot["pulled_at"] = day_after(day_of_the_pull(ahead))
+        problems = snapshot_problems(snapshot, zone=ahead)
+        self.assertTrue(problems, "a day no calendar has reached should have been refused")
+        self.assertIn("pulled_at is dated after", problems[0])
+
 
 class SchemaAndSeedTests(unittest.TestCase):
     """The tables in Supabase, the seed that filled them and the changes the

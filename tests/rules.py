@@ -85,14 +85,17 @@ def prefixes():
 REPO_PREFIX, PAGES_PREFIX = prefixes()
 
 
-def snapshot_problems(snapshot, today=None):
+def snapshot_problems(snapshot, today=None, zone=None):
     """Why this snapshot is not one the build may read, or [] when it is.
 
     `snapshot` is a path to a snapshot file or a snapshot itself; `today` is
-    the day to check it as of, which no date in it may be after.
+    the day to check it as of, which no date in it may be after, and `zone`
+    is the time zone the check itself is run in -- because the person who
+    pulled a snapshot and the machine that checks it are not in the same
+    place.
     """
     path_or_facts = str(snapshot) if isinstance(snapshot, Path) else snapshot
-    return ask(snapshot=path_or_facts, today=today)["snapshot"]
+    return ask(zone, snapshot=path_or_facts, today=today)["snapshot"]
 
 
 def allowed_links(links):

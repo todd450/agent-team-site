@@ -494,7 +494,12 @@ async function readTable(kind, { fetchImpl, baseUrl, key, timeoutMs, day }) {
 // demands of the snapshot and what a pull enforces cannot be two different
 // rules.
 function checkSnapshot(snapshot, options = {}) {
-  const day = options.today || today();
+  // options.today is the day to judge the snapshot's dates against: a pull
+  // passes the day it is running on, and a test the day it is asking about.
+  // Left out -- which is how check.sh and CI ask -- it is the latest day any
+  // calendar has reached, because the calendar the checker is on is not the
+  // one the snapshot was pulled on.
+  const day = options.today || latestDayAnywhere();
   if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
     fail(`the snapshot is not an object: ${JSON.stringify(snapshot)}`);
   }
@@ -580,6 +585,26 @@ function today(now = new Date()) {
   const month = `${now.getMonth() + 1}`.padStart(2, '0');
   const dayOfMonth = `${now.getDate()}`.padStart(2, '0');
   return `${now.getFullYear()}-${month}-${dayOfMonth}`;
+}
+
+// The furthest ahead of UTC any calendar in use runs, in hours: UTC+14, on
+// the line islands.
+const FURTHEST_AHEAD_HOURS = 14;
+
+// The latest day any calendar on Earth has reached, which is the day a check
+// judges a snapshot's dates against when it is not told one.
+//
+// Whoever pulled the snapshot and whatever is checking it are not in the same
+// place: a pull stamps the file with the day where it was run, CI runs in
+// UTC, and a reviewer runs check.sh wherever they are. Judging by the
+// checker's own day would make a snapshot pulled in a zone ahead of it a file
+// dated in the future, and freeze every merge for the hours the two calendars
+// disagree. So a date is from the future only when no calendar anywhere has
+// reached it: a typo (2099) or a clock a month out is still refused, and the
+// day's benefit of the doubt goes to the zone the checker cannot see.
+function latestDayAnywhere(now = new Date()) {
+  const anywhere = new Date(now.getTime() + FURTHEST_AHEAD_HOURS * 60 * 60 * 1000);
+  return anywhere.toISOString().slice(0, 10);
 }
 
 /**
