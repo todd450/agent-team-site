@@ -18,6 +18,12 @@ What makes a row usable is written down in one place, `scripts/pull-facts.js` (d
 snapshot with that same definition, through `tests/rules.py`, so a read the puller accepts can
 never be a snapshot the checks then reject.
 
+The characters a fact may carry are an allowlist -- letters, marks, numbers, punctuation, symbols
+and ordinary spaces, and nothing Unicode calls invisible by default -- rather than a list of the
+ones already found to be trouble. The scenarios from `control-character-in-text.json` to
+`variation-selector-in-text.json` are all one rule: each is a character a reader of the page and a
+reviewer reading the diff both see nothing of, and the list of those was never finished.
+
 | Scenario | The read |
 | --- | --- |
 | `same-read-twice.json` | the same four reads, run twice -- it must succeed, and twice over it must write byte-identical files, whatever day the second run happens on |
@@ -34,10 +40,14 @@ never be a snapshot the checks then reject.
 | `missing-column.json` | a row without its `as_of`, so a fact arrives with no date |
 | `empty-required-column.json` | a step whose `state` is the empty string, which `not null` in the tables does not stop |
 | `whitespace-only-required-column.json` | a measure whose `label` is spaces: not empty, and still nothing a reader can see |
-| `tab-only-required-column.json` | a record entry of one tab: a control character, refused by code point |
+| `tab-only-required-column.json` | a record entry of one tab: a control character, outside the characters a fact may carry |
 | `control-character-in-text.json` | a step whose `state` is one `U+001F`, which shows a reader nothing while passing for a value |
 | `zero-width-character-in-text.json` | a measure whose `label` is zero-width characters: neither empty nor whitespace, and nothing on the page |
 | `direction-override-in-text.json` | a fact carrying `U+202E`, which reorders what follows it, so the page and the snapshot say different things |
+| `bidi-mark-in-text.json` | the same reordering from a bidirectional mark, `U+200F`, which has no width of its own either |
+| `bidi-marks-around-a-figure.json` | a `bar` of `3-5` between two `U+061C` marks, which displays as `5-3` while the diff shows `3-5` |
+| `soft-hyphen-in-text.json` | a `unit` carrying `U+00AD`, which draws nothing unless the line happens to break on it |
+| `variation-selector-in-text.json` | a headline carrying `U+FE0F`: a mark, which is a category a fact may carry, and invisible by default |
 | `as-of-after-the-day-of-the-pull.json` | a good read on a day earlier than the facts are dated: a fact cannot be true as of a day that has not happened |
 | `empty-optional-column.json` | the other side of that rule: `unit` and `standing` spelled `''` on purpose, which must still succeed |
 | `standing-outside-the-list.json` | a `standing` that is not `hit`, `pending` or `miss`, which the snapshot test would then refuse |

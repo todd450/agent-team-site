@@ -1,6 +1,6 @@
 {
   "name": "a record entry of one tab",
-  "why": "The third spelling: one tab, which no renderer shows at all, so the entry under the headline would be empty on the page. A tab is a control character, and a control character is refused wherever in a value it sits rather than only when it is the whole of one (decided on #27, 28 Oct 2026) -- so this is refused by code point before the blank rule is reached.",
+  "why": "The third spelling: one tab, which no renderer shows at all, so the entry under the headline would be empty on the page. A tab is a control character, and a control character is outside the characters a fact may carry wherever in a value it sits rather than only when it is the whole of one (decided on #27, 28 Oct 2026) -- so this is refused by code point before the blank rule is reached.",
   "outcome": "fail",
   "runs": 1,
   "fails": "record_entries[0].entry carries U+0009",

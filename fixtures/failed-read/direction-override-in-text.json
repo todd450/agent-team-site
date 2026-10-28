@@ -1,6 +1,6 @@
 {
   "name": "a record entry carrying a direction override",
-  "why": "A direction override reverses the order the characters after it are displayed in, so a fact can read on the page as one claim and be stored in the snapshot as another -- and the character is invisible in `git diff`, which is the review this snapshot's whole safety argument rests on. Refused outright, as are the direction isolates (decided on #27, 28 Oct 2026).",
+  "why": "A direction override reverses the order the characters after it are displayed in, so a fact can read on the page as one claim and be stored in the snapshot as another -- and the character is invisible in `git diff`, which is the review this snapshot's whole safety argument rests on. Outside the characters a fact may carry, as are the direction isolates and the bidirectional marks (decided on #27, 28 Oct 2026).",
   "outcome": "fail",
   "runs": 1,
   "fails": "record_entries[0].entry carries U+202E",

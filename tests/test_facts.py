@@ -35,8 +35,8 @@ from pathlib import Path
 
 # The puller's own rules, asked through node. Nothing in this file reimplements
 # one.
-from rules import (allowed_links, invisible_in, kinds, links_in, markup_in,
-                   snapshot_problems)
+from rules import (allowed_links, day_of_the_pull, kinds, links_in, markup_in,
+                   refused_in, snapshot_problems)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
@@ -185,12 +185,13 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
     def test_every_url_in_a_fact_is_in_the_page_s_allowlist(self):
         self.assert_links_are_allowed(self.snapshot)
 
-    def test_no_text_column_carries_a_character_a_reader_cannot_see(self):
-        # A control, zero-width or direction character in a reviewed file is
-        # invisible in `git diff` as well as on the page, so the review this
-        # snapshot's safety rests on cannot see it either.
+    def test_no_text_column_carries_a_character_outside_the_allowlist(self):
+        # A character a reader cannot see is invisible in `git diff` as well as
+        # on the page, so the review this snapshot's safety rests on cannot see
+        # it either. The rule says which characters a fact may carry, rather
+        # than listing the ones somebody has already been caught by.
         where, values = zip(*text_values(self.snapshot))
-        for place, value, found in zip(where, values, invisible_in(values)):
+        for place, value, found in zip(where, values, refused_in(values)):
             with self.subTest(value=place):
                 self.assertEqual(found, [], f"{place} carries {found}: {value!r}")
 
@@ -315,9 +316,9 @@ class SchemaAndSeedTests(unittest.TestCase):
         # puller would accept, or a pull fails from the start.
         for path in sorted(SUPABASE_SQL):
             literals = sql_literals(path.read_text(encoding="utf-8"))
-            for literal, markup, unchecked, invisible in zip(
+            for literal, markup, unchecked, refused in zip(
                     literals, markup_in(literals), unchecked_links(literals),
-                    invisible_in(literals)):
+                    refused_in(literals)):
                 with self.subTest(file=path.name, value=literal[:40]):
                     self.assertEqual(markup, [],
                                      f"a fact in {path.name} could put markup on the page: "
@@ -325,7 +326,7 @@ class SchemaAndSeedTests(unittest.TestCase):
                     self.assertEqual(unchecked, [],
                                      f"a fact in {path.name} carries a link nothing can "
                                      f"vouch for: {literal!r}")
-                    self.assertEqual(invisible, [],
+                    self.assertEqual(refused, [],
                                      f"a fact in {path.name} carries a character a reader "
                                      f"cannot see: {literal!r}")
 

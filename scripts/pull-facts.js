@@ -92,29 +92,31 @@ const ESCAPE = /%[0-9A-Fa-f]{2}/g;
 const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-// Characters no fact may carry at all, wherever in the value they sit and
-// whether or not they are inside backticks (decided on #27, 28 Oct 2026).
-// Each one is a character neither a reader of the page nor a reviewer reading
-// the diff can see, and that a human reads the diff is this snapshot's whole
-// safety argument:
+// The characters a fact's text may carry, as an allowlist (decided on #27,
+// 28 Oct 2026). A fact is prose, a date, a figure, `code` and [text](url), so
+// what it needs is letters, marks, numbers, punctuation, symbols and ordinary
+// spaces -- Unicode's general categories L, M, N, P, S and Zs -- and never a
+// character Unicode itself calls default-ignorable, which is invisible by
+// design even where its category is an allowed one.
 //
-//   U+0000-U+001F, U+007F-U+009F  the C0 and C1 control characters. A value
-//                                 of one of them shows a reader nothing
-//                                 while passing for a value, and a tab goes
-//                                 with them.
-//   U+200B-U+200D, U+2060,        the zero-width characters: no width and no
-//   U+FEFF                        glyph, so a required column can be full of
-//                                 them and still be blank on the page.
-//   U+202A-U+202E, U+2066-U+2069  the direction overrides, embeddings and
-//                                 isolates. They reorder the characters
-//                                 after them, so a fact can read on the page
-//                                 as one claim and be stored in the snapshot
-//                                 as another.
+// An allowlist because the list it replaced could not be finished: round after
+// round named another character outside it -- the bidirectional marks, the
+// soft hyphen, the variation selectors, the invisible operators, the fillers
+// -- and every one of them is the same two harms. A character a reader cannot
+// see fills a required column and leaves the page blank, and a character that
+// reorders what follows it makes the page state one thing and the snapshot
+// another. Neither shows in `git diff`, and that a human reads the diff is
+// this snapshot's whole safety argument.
 //
-// A line ending is a control character too, and is reported as the line
+// Written as the complement, so one pass over a value finds every character it
+// refuses and the reason a pull gives can name them. "Every character is in L,
+// M, N, P, S or Zs, and none of them is default-ignorable" is the same rule
+// read the other way round.
+//
+// A line ending is outside the allowlist too, and is reported as the line
 // ending it is rather than by code point: UNREADABLE_TEXT runs first and
 // gives the reason a renderer makes of it.
-const INVISIBLE_CHARACTER = /[\u0000-\u001f\u007f-\u009f\u200b-\u200d\u2060\u202a-\u202e\u2066-\u2069\ufeff]/g;
+const REFUSED_CHARACTER = /[^\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]|\p{Default_Ignorable_Code_Point}/gu;
 // What two backticks quote as code: a short literal, between single
 // backticks, on one line of text that holds nothing a renderer reads before
 // it reads an inline.
@@ -288,11 +290,11 @@ function isRealDate(value) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
 }
 
-// Every invisible character this value carries, by code point, in the order
-// they are first found -- so the reason a pull gives names the character a
-// reader cannot see for themselves.
-function invisibleCharacters(value) {
-  const found = typeof value === 'string' ? value.match(INVISIBLE_CHARACTER) || [] : [];
+// Every character in this value the allowlist refuses, by code point, in the
+// order they are first found -- so the reason a pull gives names a character
+// nobody reading the page or the diff could have named for themselves.
+function refusedCharacters(value) {
+  const found = typeof value === 'string' ? value.match(REFUSED_CHARACTER) || [] : [];
   return [...new Set(found)].map(
     (character) => `U+${character.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
 }
@@ -348,11 +350,12 @@ function checkText(where, value) {
     if (UNREADABLE_REASON[found]) fail(`${where} ${UNREADABLE_REASON[found]}`);
     fail(`${where} carries ${found} outside backticks, which would put markup on the page`);
   }
-  const invisible = invisibleCharacters(value);
-  if (invisible.length > 0) {
-    fail(`${where} carries ${invisible.join(', ')}, which a reader cannot see: a control, `
-      + 'zero-width or direction character is refused wherever in a value it sits, inside '
-      + 'backticks or out');
+  const refused = refusedCharacters(value);
+  if (refused.length > 0) {
+    fail(`${where} carries ${refused.join(', ')}, which a fact's text may not: a fact carries `
+      + 'letters, marks, numbers, punctuation, symbols and ordinary spaces (Unicode L, M, N, P, '
+      + 'S and Zs) and no character that is invisible by default, wherever in a value it sits, '
+      + 'inside backticks or out');
   }
   const { targets, unreadable } = linkTargets(value);
   if (unreadable) {
@@ -654,7 +657,8 @@ module.exports = {
   isAllowedLink,
   linkTargets,
   markupOutsideBackticks,
-  invisibleCharacters,
+  refusedCharacters,
+  today,
   ALLOWED_LINK_PREFIXES,
   KINDS,
   SNAPSHOT_PATH,

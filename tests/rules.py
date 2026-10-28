@@ -20,6 +20,7 @@ run against Supabase.
 """
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -28,13 +29,18 @@ CHECK_FACTS_JS = Path(__file__).resolve().parent / "check_facts.js"
 NODE = shutil.which("node")
 
 
-def ask(**questions):
+def ask(_zone=None, **questions):
     """Put questions to the puller and return its answers. One process per
-    call, so a caller with many cases asks them all at once."""
+    call, so a caller with many cases asks them all at once.
+
+    `_zone` runs that process in a given time zone, because the day a pull
+    reckons it is, is the day where it is run.
+    """
     if NODE is None:  # pragma: no cover - CI and check.sh both have Node
         raise RuntimeError("node is needed: it holds the one definition of a valid fact value")
+    environment = None if _zone is None else {**os.environ, "TZ": _zone}
     result = subprocess.run([NODE, str(CHECK_FACTS_JS)], input=json.dumps(questions),
-                            capture_output=True, text=True, timeout=120)
+                            capture_output=True, text=True, timeout=120, env=environment)
     if result.returncode != 0:
         raise RuntimeError(f"the puller could not answer: {result.stderr.strip()}")
     return json.loads(result.stdout)
@@ -119,11 +125,18 @@ def markup_outside_backticks(text):
     return markup_in([text])[0]
 
 
-def invisible_in(texts):
-    """The code points of the characters in each text that a reader cannot
-    see: a control, zero-width or direction character."""
-    return ask(invisible=list(texts))["invisible"]
+def refused_in(texts):
+    """The code points of the characters in each text the allowlist refuses:
+    anything outside letters, marks, numbers, punctuation, symbols and
+    ordinary spaces, and anything invisible by default."""
+    return ask(characters=list(texts))["characters"]
 
 
-def invisible_characters(text):
-    return invisible_in([text])[0]
+def refused_characters(text):
+    return refused_in([text])[0]
+
+
+def day_of_the_pull(zone=None):
+    """The day a pull run in this time zone would reckon it is: the day it
+    stamps a snapshot with, and the day no fact may be dated after."""
+    return ask(zone)["day"]

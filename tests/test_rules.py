@@ -23,9 +23,11 @@ What the cases pin:
   way -- a line ending, a backslash escape, a character reference, a cell
   separator, backticks that do not pair -- is reported rather than read,
   because a tag a reader thinks is quoted is an element on the page.
-- A character neither a reader of the page nor a reviewer reading the diff
-  can see is reported wherever it sits: a control character, a zero-width
-  character, a direction override or isolate.
+- A fact's characters come from an allowlist -- letters, marks, numbers,
+  punctuation, symbols and ordinary spaces, and nothing invisible by default
+  -- so a character neither a reader of the page nor a reviewer reading the
+  diff can see is reported wherever it sits, whether or not anyone has met it
+  before.
 - The readers answer the longest text promptly. A fact's text has no length
   limit, so a reader that rescans it from every opening bracket turns one long
   value into a pull, a check.sh run and a CI run that take minutes.
@@ -34,8 +36,8 @@ What the cases pin:
 import time
 import unittest
 
-from rules import (PAGES_PREFIX, REPO_PREFIX, allowed_links, invisible_in,
-                   links_in, markup_in)
+from rules import (PAGES_PREFIX, REPO_PREFIX, allowed_links, links_in,
+                   markup_in, refused_in)
 
 # (link, why it is in the allowlist)
 ALLOWED = [
@@ -216,11 +218,13 @@ MARKUP = [
 ]
 
 
-# A fact's text, and the characters in it a reader cannot see. Each is refused
-# outright, wherever in the value it sits and whether or not it is inside
-# backticks (decided on #27, 28 Oct 2026) -- not only when it is the whole of
-# a value, because the value that matters is the ordinary-looking one with one
-# of these hidden in it.
+# A fact's text, and the characters in it the allowlist refuses. A fact may
+# carry letters, marks, numbers, punctuation, symbols and ordinary spaces
+# (Unicode L, M, N, P, S and Zs) and no character that is invisible by default
+# (decided on #27, 28 Oct 2026). Anything else is refused wherever in the value
+# it sits and whether or not it is inside backticks -- not only when it is the
+# whole of a value, because the value that matters is the ordinary-looking one
+# with one of these hidden in it.
 #
 # These are the two ways a fact can get past the review this snapshot's safety
 # rests on: a value a reader sees nothing of, which fills a required column
@@ -228,8 +232,12 @@ MARKUP = [
 # order are not the same, which lets the page show a reader something other
 # than what the fact says while every check is green. Neither shows in
 # `git diff` either: JSON.stringify writes them into the snapshot raw.
+#
+# Every case below used to need its own line in a list of refused code points,
+# and the list was never finished -- which is why the rule says what a fact may
+# carry instead.
 # (text, the code points reported)
-INVISIBLE = [
+REFUSED_CHARACTERS = [
     ("Nothing here is hidden at all.", []),
     (f"A literal `<li>` and a [link]({REPO_PREFIX}/pull/35).", []),
     # An em dash, an accent, a right-to-left script and a CJK word are
@@ -262,6 +270,28 @@ INVISIBLE = [
     # Reported once each, in the order they are first found, so the reason
     # a pull gives names them all.
     ("A\u200bb\u202ec\u200bd", ["U+200B", "U+202E"]),
+    # The bidirectional marks, which are the same two harms under another
+    # Unicode heading: no width of their own, and they reorder the neutral
+    # text that follows them.
+    ("Done, see the plan.\u200e", ["U+200E"]),
+    ("Done, see the plan.\u200f", ["U+200F"]),
+    ("Done, see the plan.\u061c", ["U+061C"]),
+    # A bar of "3-5" between two marks, which displays as "5-3": the
+    # snapshot and the page then state different numbers, and `git diff`
+    # shows the reviewer neither mark.
+    ("\u061c3-5\u061c", ["U+061C"]),
+    # A soft hyphen: a letter-width character with nothing to show for
+    # itself unless the line happens to break on it.
+    ("Recorded 26 Oct 2026, 61,365 lines\u00ad.", ["U+00AD"]),
+    # A variation selector, which is a mark (an allowed category) and
+    # default-ignorable, so it is the character the category list alone
+    # would let through.
+    ("A step that is done.\ufe0f", ["U+FE0F"]),
+    # The invisible mathematical operators, and the characters whose own
+    # Unicode name says they are fillers.
+    ("Two figures 61\u2062365 apart.", ["U+2062"]),
+    ("A label of nothing: \u3164", ["U+3164"]),
+    ("A tag nobody can see \U000e0001here.", ["U+E0001"]),
 ]
 
 # A fact's text has no length limit: a Postgres text column has none, the page
@@ -327,12 +357,13 @@ class MarkupReaderTests(unittest.TestCase):
                 self.assertEqual(reported, brackets)
 
 
-class InvisibleCharacterTests(unittest.TestCase):
-    """The characters a fact may not carry at all, because nobody reading the
-    page or the diff can see them."""
+class CharacterAllowlistTests(unittest.TestCase):
+    """The characters a fact may carry, and the ones it may not -- because
+    nobody reading the page or the diff can see them."""
 
-    def test_every_character_a_reader_cannot_see_is_reported(self):
-        for (text, found), reported in zip(INVISIBLE, invisible_in(text for text, _ in INVISIBLE)):
+    def test_every_character_outside_the_allowlist_is_reported(self):
+        for (text, found), reported in zip(
+                REFUSED_CHARACTERS, refused_in(text for text, _ in REFUSED_CHARACTERS)):
             with self.subTest(text=text):
                 self.assertEqual(reported, found)
 
