@@ -22,6 +22,12 @@ What the cases here pin:
 - Every page template is written to its matching output path, so a later page
   costs a template and not a generator change.
 - Neither a copy-key typo nor a dead string survives the build.
+- Every value in a copy file is a string the page shows, and a value of any
+  other shape is refused in a sentence naming the file, the key and the value.
+- A place the build cannot read from or write to is refused in a sentence
+  naming that place, and a page it could not write is left exactly as it was.
+  Every refusal here is a sentence: a stack trace is a failure of this suite,
+  however wrong the thing that caused it was.
 - The facts drive the page: a row added appears in position order with the date
   the page dates it by, and a row removed disappears.
 - The newest record entry is the one marked "this build", by construction, so
@@ -113,6 +119,12 @@ ROWS = {
 
 TAG_RE = re.compile(r"<[^>]+>")
 HREF_RE = re.compile(r'href="([^"]*)"')
+
+# What a refusal may not look like: a line of stack frames, or the name of a
+# Node error class thrown straight out of the build. Either one means the
+# generator met something it did not expect and said nothing about it.
+STACK_FRAME_RE = re.compile(r"^\s+at \S", re.MULTILINE)
+THROWN_RE = re.compile(r"\b(?:Type|Range|Reference|Assertion)Error\b|^\s*Error: ", re.MULTILINE)
 
 
 def load(path):
@@ -256,14 +268,33 @@ class GeneratorTestCase(unittest.TestCase):
         self.assertTrue(written, "the generator wrote no page at all")
         return {name: (Path(out) / name).read_text(encoding="utf-8") for name in written}
 
-    def refuse(self, root, fragment, snapshot=None):
-        """Assert the build fails and says why, and return the reason."""
-        out = self.tmpdir()
+    def refuse(self, root, fragment, snapshot=None, out=None):
+        """Assert the build fails and says why in a sentence, and return the
+        reason."""
+        if out is None:
+            out = self.tmpdir()
         result = self.run_generator(root=root, out=out, snapshot=snapshot)
         self.assertNotEqual(result.returncode, 0,
                             f"this build should have been refused, and wrote: {result.stdout}")
         self.assertIn(fragment, result.stderr)
+        self.assert_a_sentence(result.stderr)
         return result.stderr
+
+    def assert_a_sentence(self, reason):
+        """A refusal is a sentence whoever is editing the sources can act on.
+
+        The only people who ever run this build are the founder editing a
+        heading and whoever is changing a template, so a raw Node error thrown
+        straight out -- the stack of a TypeError, an EACCES from the write --
+        names neither the file nor the remedy. However wrong the thing that
+        caused it was, a stack trace with no sentence in it is a failure.
+        """
+        self.assertTrue(reason.startswith("generate:"),
+                        f"a refusal says `generate: <what is wrong>` and this said: {reason}")
+        self.assertNotRegex(reason, STACK_FRAME_RE,
+                            f"this refusal carries a stack trace instead of a sentence: {reason}")
+        self.assertNotRegex(reason, THROWN_RE,
+                            f"this refusal is a raw Node error, not a sentence: {reason}")
 
     def page(self, root=None, snapshot=None):
         """The home page as the generator writes it."""
@@ -380,6 +411,91 @@ class OutputPathTests(GeneratorTestCase):
         self.refuse(root, "extra")
 
 
+class PlaceItCannotReadOrWriteTests(GeneratorTestCase):
+    """A place the build cannot read from or write to is refused in a sentence
+    naming that place.
+
+    The build writes files, so the ways it fails are the filesystem's: a page
+    left read-only by a checkout or an editor, an output path that is not a
+    directory, a directory it may not write into, a source directory that is
+    not there. Each one has to arrive as the place and the reason, because the
+    remedy is a chmod or a path and the person running it cannot guess which.
+    Nothing is half-written either way: a page it could not write is left
+    exactly as it was.
+    """
+
+    @staticmethod
+    def writable(path):
+        """Whether this user can in fact write there, asked by writing."""
+        try:
+            if path.is_dir():
+                probe = path / "probe"
+                probe.write_text("", encoding="utf-8")
+                probe.unlink()
+            else:
+                with path.open("a", encoding="utf-8"):
+                    pass
+            return True
+        except OSError:
+            return False
+
+    def unwritable(self, path, mode=0o444):
+        """Make a path read-only for the rest of this test, and put it back
+        afterwards so the scratch directory can be cleaned up."""
+        was = path.stat().st_mode & 0o777
+        self.addCleanup(path.chmod, was)
+        path.chmod(mode)
+        if self.writable(path):  # pragma: no cover - a user the filesystem never refuses
+            raise unittest.SkipTest(f"{path} is still writable at mode {mode:o}: this case needs "
+                                    f"a user the filesystem says no to, and root never hears no")
+        return path
+
+    def with_a_second_page(self, root):
+        """A second page, so a build has a directory to make as well as a file
+        to write."""
+        (root / "templates" / "pages" / "extra.html").write_text(
+            '  <section class="extra">\n    <h2>{{extra.heading}}</h2>\n  </section>\n',
+            encoding="utf-8")
+        dump(root / "content" / "copy" / "en" / "extra.json", {
+            "headline": "An extra page",
+            "lede": "Its own wording, in its own file.",
+            "extra.heading": "Extra",
+        })
+        return root
+
+    def test_a_page_it_cannot_write_is_refused_naming_the_page(self):
+        root = self.sources()
+        out = self.tmpdir()
+        written = self.build(root=root, out=out)
+        page = self.unwritable(out / "index.html")
+        reason = self.refuse(root, "index.html", out=out)
+        self.assertIn(str(page), reason,
+                      "the refusal must name the place it could not write to")
+        self.assertEqual(page.read_text(encoding="utf-8"), written["index.html"],
+                         "a build that could not write a page must leave it as it was")
+
+    def test_an_output_path_that_is_not_a_directory_is_refused_naming_it(self):
+        root = self.sources()
+        out = self.tmpdir() / "not-a-directory"
+        out.write_text("I am a file.\n", encoding="utf-8")
+        reason = self.refuse(root, str(out), out=out)
+        self.assertIn("index.html", reason, "the refusal must name the page it was writing")
+        self.assertEqual(out.read_text(encoding="utf-8"), "I am a file.\n")
+
+    def test_an_output_directory_it_cannot_write_into_is_refused_naming_it(self):
+        root = self.with_a_second_page(self.sources())
+        out = self.unwritable(self.tmpdir(), 0o555)
+        reason = self.refuse(root, str(out), out=out)
+        self.assertEqual(sorted(path.name for path in out.iterdir()), [],
+                         f"nothing should have been written into {out}")
+        self.assertIn("extra", reason, "the refusal must name the directory it could not make")
+
+    def test_a_source_directory_it_cannot_read_is_refused_naming_it(self):
+        root = self.sources()
+        shutil.rmtree(root / "templates" / "pages")
+        self.refuse(root, "templates/pages")
+
+
 class EveryServedPageTests(GeneratorTestCase):
     """Every page a build writes is held to this site's page rules, not just
     the one page there is today.
@@ -481,6 +597,76 @@ class CopyKeyTests(GeneratorTestCase):
                 self.assertEqual(words.split(), [],
                                  f"{template.name} writes {words.split()!r} into the page: every "
                                  f"user-facing string is a key in content/copy/en/")
+
+
+class CopyValueTests(GeneratorTestCase):
+    """Every value in a copy file is a string the page shows.
+
+    A copy file is the one source in this repo a founder editing a heading
+    opens, and JSON holds four other shapes: a figure typed without its
+    quotes, a `null` for a string not written yet, a flag, a list, and keys
+    nested under a name instead of written with dots. Each is refused in a
+    sentence naming the file, the key and what is wrong with the value -- the
+    way a missing key, a dead key and a duplicated key already are.
+    """
+
+    # One per shape JSON can hold instead of a string, which is the whole
+    # class: the check is "not a string", not a list of the shapes already
+    # found to be trouble.
+    SHAPES = {
+        "a figure typed without quotes": 42,
+        "a figure that is not whole": 0.5,
+        "null for a string not written yet": None,
+        "a flag": True,
+        "a list": ["Done.", "Not done yet."],
+        "keys nested under the name": {"thisBuild": "This build."},
+        "an empty object": {},
+    }
+
+    COPY_FILES = ("common.json", "index.json")
+
+    def test_a_copy_value_that_is_not_a_string_is_refused_naming_the_key(self):
+        for shape, value in self.SHAPES.items():
+            for name in self.COPY_FILES:
+                with self.subTest(shape=shape, copy=name):
+                    root = self.sources()
+                    path = root / "content" / "copy" / "en" / name
+                    copy = load(path)
+                    key = next(iter(copy))
+                    copy[key] = value
+                    dump(path, copy)
+                    reason = self.refuse(root, f"content/copy/en/{name}")
+                    self.assertIn(key, reason,
+                                  "the refusal must name the key whose value is wrong")
+
+    def test_a_key_nested_instead_of_dotted_is_told_the_key_to_write(self):
+        # The slip is writing {"band": {"heading": "..."}} for the key
+        # "band.heading", and the remedy is the dotted key -- so the refusal
+        # names it.
+        root = self.sources()
+        path = root / "content" / "copy" / "en" / "index.json"
+        copy = load(path)
+        dotted = next(key for key in copy if "." in key)
+        head, _, tail = dotted.partition(".")
+        copy[head] = {tail: copy.pop(dotted)}
+        dump(path, copy)
+        self.refuse(root, dotted)
+
+    def test_a_copy_file_that_is_not_keys_and_strings_at_all_is_refused(self):
+        for value in (["Some words."], "Some words.", 7, None):
+            for name in self.COPY_FILES:
+                with self.subTest(copy=name, shape=type(value).__name__):
+                    root = self.sources()
+                    dump(root / "content" / "copy" / "en" / name, value)
+                    self.refuse(root, f"content/copy/en/{name}")
+
+    def test_the_copy_this_repo_holds_is_keys_and_strings(self):
+        for path in sorted((CONTENT / "copy").glob("**/*.json")):
+            with self.subTest(copy=path.name):
+                copy = load(path)
+                self.assertIsInstance(copy, dict)
+                for key, value in copy.items():
+                    self.assertIsInstance(value, str, f"{path.name}: {key} is not a string")
 
 
 class FactTests(GeneratorTestCase):

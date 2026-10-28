@@ -108,21 +108,96 @@ function fail(message) {
   throw new BuildError(message);
 }
 
-function read(file) {
+// A path as a sentence names it: relative to the repo for the sources and the
+// pages, which is how everyone here refers to them, and absolute once it is
+// somewhere else, because "../../../var/folders/..." helps nobody.
+function shown(file) {
+  const relative = path.relative(REPO, file);
+  return relative.startsWith('..') ? file : relative;
+}
+
+// Every way the filesystem says no -- a file that is not there, a page left
+// read-only, a directory that may not be written into -- arrives as the place
+// and the reason. The people who run this build are the founder editing a
+// heading and whoever is changing a template, and the remedy is a path or a
+// chmod: a stack trace names neither.
+function readFile(file) {
   try {
     return fs.readFileSync(file, 'utf8');
   } catch (error) {
-    return fail(`${path.relative(REPO, file)} cannot be read (${error.code || error.message})`);
+    return fail(`${shown(file)} cannot be read (${error.code || error.message})`);
+  }
+}
+
+function readDirectory(dir) {
+  try {
+    return fs.readdirSync(dir);
+  } catch (error) {
+    return fail(`${shown(dir)} cannot be read (${error.code || error.message})`);
+  }
+}
+
+function writeFile(file, text, what = path.basename(file)) {
+  const dir = path.dirname(file);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (error) {
+    fail(`${shown(dir)} cannot be made a directory to write ${what} into `
+      + `(${error.code || error.message})`);
+  }
+  try {
+    fs.writeFileSync(file, text, 'utf8');
+  } catch (error) {
+    fail(`${shown(file)} cannot be written (${error.code || error.message})`);
   }
 }
 
 function readJson(file) {
-  const text = read(file);
+  const text = readFile(file);
   try {
     return JSON.parse(text);
   } catch (error) {
-    return fail(`${path.relative(REPO, file)} is not JSON: ${error.message}`);
+    return fail(`${shown(file)} is not JSON: ${error.message}`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// A copy file: keys, and the strings the page shows. Nothing else, and the
+// build is where that is said, because a copy file is the one source in this
+// repo somebody opens to change a heading and JSON holds four other shapes. A
+// figure typed without its quotes, a null for a string not written yet, a flag,
+// a list, and keys nested under a name instead of written with dots are all
+// ordinary slips, so each is a sentence naming the file, the key and the value
+// -- the way a missing key, a dead key and a duplicated key already are.
+function describe(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'a list';
+  if (typeof value === 'object') return 'an object';
+  if (typeof value === 'number') return `the figure ${JSON.stringify(value)}`;
+  if (typeof value === 'boolean') return JSON.stringify(value);
+  return `the string ${JSON.stringify(value)}`;
+}
+
+function readCopy(file) {
+  const where = shown(file);
+  const copy = readJson(file);
+  if (copy === null || typeof copy !== 'object' || Array.isArray(copy)) {
+    return fail(`${where} holds ${describe(copy)}, and a copy file is keys and the strings the `
+      + 'page shows: { "headline": "Some words." }');
+  }
+  for (const [key, value] of Object.entries(copy)) {
+    if (typeof value === 'string') continue;
+    // The nested slip has a remedy of its own: the keys are flat and a dot is
+    // part of the name, so say which name to write.
+    const nested = value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? ' The keys are flat, so a name with a dot in it is written whole: '
+        + `${Object.keys(value).map((inner) => `"${key}.${inner}"`).join(', ') || `"${key}.<name>"`}`
+        + ', not nested.'
+      : '';
+    return fail(`${where}: the key ${key} holds ${describe(value)}, and every value in a copy `
+      + `file is a string the page shows.${nested}`);
+  }
+  return copy;
 }
 
 // ---------------------------------------------------------------------------
@@ -430,16 +505,16 @@ function build(options = {}) {
   }
   const snapshot = readJson(snapshotPath);
   if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
-    fail(`${path.relative(REPO, snapshotPath)} is not a snapshot`);
+    fail(`${shown(snapshotPath)} is not a snapshot`);
   }
   // The day the facts were last read, which dates a section that has no row of
   // its own to date it.
-  dateParts(snapshot.pulled_at, `${path.relative(REPO, snapshotPath)}: pulled_at`);
-  const common = readJson(path.join(root, 'content', 'copy', 'en', 'common.json'));
+  dateParts(snapshot.pulled_at, `${shown(snapshotPath)}: pulled_at`);
+  const common = readCopy(path.join(root, 'content', 'copy', 'en', 'common.json'));
 
-  const layout = tidy(read(path.join(root, 'templates', 'layout.html')));
+  const layout = tidy(readFile(path.join(root, 'templates', 'layout.html')));
   const pagesDir = path.join(root, 'templates', 'pages');
-  const templates = fs.readdirSync(pagesDir).filter((name) => name.endsWith('.html')).sort();
+  const templates = readDirectory(pagesDir).filter((name) => name.endsWith('.html')).sort();
   if (templates.length === 0) fail('templates/pages holds no page template at all');
 
   const siteValues = {
@@ -470,7 +545,7 @@ function build(options = {}) {
       fail(`${where} has no wording: every page reads content/copy/en/common.json and its own `
         + `content/copy/en/${name}.json, and there is no such file`);
     }
-    const own = readJson(copyFile);
+    const own = readCopy(copyFile);
     for (const key of Object.keys(own)) {
       if (Object.hasOwn(common, key)) {
         fail(`the key ${key} is defined in both common.json and ${name}.json, so which string `
@@ -481,8 +556,8 @@ function build(options = {}) {
     const copyFiles = `content/copy/en/common.json or content/copy/en/${name}.json`;
 
     const partials = (partialName) => {
-      if (partialName === 'page') return tidy(read(path.join(pagesDir, file)));
-      return tidy(read(path.join(root, 'templates', 'partials', `${partialName}.html`)));
+      if (partialName === 'page') return tidy(readFile(path.join(pagesDir, file)));
+      return tidy(readFile(path.join(root, 'templates', 'partials', `${partialName}.html`)));
     };
     const template = expand(layout, partials, where);
 
@@ -528,8 +603,7 @@ function build(options = {}) {
       }
       if (committed !== html) stale.push(target);
     } else {
-      fs.mkdirSync(path.dirname(pageFile), { recursive: true });
-      fs.writeFileSync(pageFile, html, 'utf8');
+      writeFile(pageFile, html, target);
     }
     pages.push(target);
   }
