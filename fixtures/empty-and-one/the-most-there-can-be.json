@@ -1,0 +1,539 @@
+{
+  "pulled_at": "2026-10-27",
+  "status_steps": [
+    {
+      "position": 1,
+      "as_of": "2026-10-02",
+      "name": "build step 1 of a great many",
+      "state": "Done",
+      "detail": "Step 1, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 2,
+      "as_of": "2026-10-03",
+      "name": "build step 2 of a great many",
+      "state": "Done",
+      "detail": "Step 2, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 3,
+      "as_of": "2026-10-04",
+      "name": "build step 3 of a great many",
+      "state": "Running",
+      "detail": "Step 3, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 4,
+      "as_of": "2026-10-05",
+      "name": "build step 4 of a great many",
+      "state": "Done",
+      "detail": "Step 4, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 5,
+      "as_of": "2026-10-06",
+      "name": "build step 5 of a great many",
+      "state": "Done",
+      "detail": "Step 5, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 6,
+      "as_of": "2026-10-07",
+      "name": "build step 6 of a great many",
+      "state": "Running",
+      "detail": "Step 6, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 7,
+      "as_of": "2026-10-08",
+      "name": "build step 7 of a great many",
+      "state": "Done",
+      "detail": "Step 7, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 8,
+      "as_of": "2026-10-09",
+      "name": "build step 8 of a great many",
+      "state": "Done",
+      "detail": "Step 8, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 9,
+      "as_of": "2026-10-10",
+      "name": "build step 9 of a great many",
+      "state": "Running",
+      "detail": "Step 9, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 10,
+      "as_of": "2026-10-11",
+      "name": "build step 10 of a great many",
+      "state": "Done",
+      "detail": "Step 10, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 11,
+      "as_of": "2026-10-12",
+      "name": "build step 11 of a great many",
+      "state": "Done",
+      "detail": "Step 11, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    },
+    {
+      "position": 12,
+      "as_of": "2026-10-13",
+      "name": "build step 12 of a great many",
+      "state": "Running",
+      "detail": "Step 12, carrying a link to [the brief](https://github.com/todd450/founding-agents-site/issues/1) and a `literal`, so a long band is drawn from the same two inline forms a short one is."
+    }
+  ],
+  "costs": [
+    {
+      "position": 1,
+      "as_of": "2026-10-02",
+      "figure": "1,000",
+      "unit": "",
+      "lead": "Cost number 1.",
+      "claim": "The 1th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 2 Oct 2026"
+    },
+    {
+      "position": 2,
+      "as_of": "2026-10-03",
+      "figure": "2,000",
+      "unit": "lines, in 8 days",
+      "lead": "Cost number 2.",
+      "claim": "The 2th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 3 Oct 2026"
+    },
+    {
+      "position": 3,
+      "as_of": "2026-10-04",
+      "figure": "3,000",
+      "unit": "",
+      "lead": "Cost number 3.",
+      "claim": "The 3th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 4 Oct 2026"
+    },
+    {
+      "position": 4,
+      "as_of": "2026-10-05",
+      "figure": "4,000",
+      "unit": "lines, in 8 days",
+      "lead": "Cost number 4.",
+      "claim": "The 4th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 5 Oct 2026"
+    },
+    {
+      "position": 5,
+      "as_of": "2026-10-06",
+      "figure": "5,000",
+      "unit": "",
+      "lead": "Cost number 5.",
+      "claim": "The 5th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 6 Oct 2026"
+    },
+    {
+      "position": 6,
+      "as_of": "2026-10-07",
+      "figure": "6,000",
+      "unit": "lines, in 8 days",
+      "lead": "Cost number 6.",
+      "claim": "The 6th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 7 Oct 2026"
+    },
+    {
+      "position": 7,
+      "as_of": "2026-10-08",
+      "figure": "7,000",
+      "unit": "",
+      "lead": "Cost number 7.",
+      "claim": "The 7th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 8 Oct 2026"
+    },
+    {
+      "position": 8,
+      "as_of": "2026-10-09",
+      "figure": "8,000",
+      "unit": "lines, in 8 days",
+      "lead": "Cost number 8.",
+      "claim": "The 8th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 9 Oct 2026"
+    },
+    {
+      "position": 9,
+      "as_of": "2026-10-10",
+      "figure": "9,000",
+      "unit": "",
+      "lead": "Cost number 9.",
+      "claim": "The 9th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 10 Oct 2026"
+    },
+    {
+      "position": 10,
+      "as_of": "2026-10-11",
+      "figure": "10,000",
+      "unit": "lines, in 8 days",
+      "lead": "Cost number 10.",
+      "claim": "The 10th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 11 Oct 2026"
+    },
+    {
+      "position": 11,
+      "as_of": "2026-10-12",
+      "figure": "11,000",
+      "unit": "",
+      "lead": "Cost number 11.",
+      "claim": "The 11th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 12 Oct 2026"
+    },
+    {
+      "position": 12,
+      "as_of": "2026-10-13",
+      "figure": "12,000",
+      "unit": "lines, in 8 days",
+      "lead": "Cost number 12.",
+      "claim": "The 12th of far more costs than the page has ever shown at once.",
+      "source": "Recorded 13 Oct 2026"
+    }
+  ],
+  "measures": [
+    {
+      "position": 1,
+      "as_of": "2026-10-02",
+      "label": "Measure number 1, with a `literal` in its label",
+      "bar": "1",
+      "current": "1",
+      "standing": "pending"
+    },
+    {
+      "position": 2,
+      "as_of": "2026-10-03",
+      "label": "Measure number 2, with a `literal` in its label",
+      "bar": "2",
+      "current": "2",
+      "standing": "miss"
+    },
+    {
+      "position": 3,
+      "as_of": "2026-10-04",
+      "label": "Measure number 3, with a `literal` in its label",
+      "bar": "3",
+      "current": "3",
+      "standing": ""
+    },
+    {
+      "position": 4,
+      "as_of": "2026-10-05",
+      "label": "Measure number 4, with a `literal` in its label",
+      "bar": "4",
+      "current": "4",
+      "standing": "hit"
+    },
+    {
+      "position": 5,
+      "as_of": "2026-10-06",
+      "label": "Measure number 5, with a `literal` in its label",
+      "bar": "5",
+      "current": "5",
+      "standing": "pending"
+    },
+    {
+      "position": 6,
+      "as_of": "2026-10-07",
+      "label": "Measure number 6, with a `literal` in its label",
+      "bar": "6",
+      "current": "6",
+      "standing": "miss"
+    },
+    {
+      "position": 7,
+      "as_of": "2026-10-08",
+      "label": "Measure number 7, with a `literal` in its label",
+      "bar": "7",
+      "current": "7",
+      "standing": ""
+    },
+    {
+      "position": 8,
+      "as_of": "2026-10-09",
+      "label": "Measure number 8, with a `literal` in its label",
+      "bar": "8",
+      "current": "8",
+      "standing": "hit"
+    },
+    {
+      "position": 9,
+      "as_of": "2026-10-10",
+      "label": "Measure number 9, with a `literal` in its label",
+      "bar": "9",
+      "current": "9",
+      "standing": "pending"
+    },
+    {
+      "position": 10,
+      "as_of": "2026-10-11",
+      "label": "Measure number 10, with a `literal` in its label",
+      "bar": "10",
+      "current": "10",
+      "standing": "miss"
+    },
+    {
+      "position": 11,
+      "as_of": "2026-10-12",
+      "label": "Measure number 11, with a `literal` in its label",
+      "bar": "11",
+      "current": "11",
+      "standing": ""
+    },
+    {
+      "position": 12,
+      "as_of": "2026-10-13",
+      "label": "Measure number 12, with a `literal` in its label",
+      "bar": "12",
+      "current": "12",
+      "standing": "hit"
+    }
+  ],
+  "record_entries": [
+    {
+      "position": 1,
+      "as_of": "2026-10-13",
+      "headline": "entry number 1",
+      "entry": "The 1th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 2,
+      "as_of": "2026-10-12",
+      "headline": "entry number 2",
+      "entry": "The 2th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 3,
+      "as_of": "2026-10-11",
+      "headline": "entry number 3",
+      "entry": "The 3th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 4,
+      "as_of": "2026-10-10",
+      "headline": "entry number 4",
+      "entry": "The 4th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 5,
+      "as_of": "2026-10-09",
+      "headline": "entry number 5",
+      "entry": "The 5th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 6,
+      "as_of": "2026-10-08",
+      "headline": "entry number 6",
+      "entry": "The 6th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 7,
+      "as_of": "2026-10-07",
+      "headline": "entry number 7",
+      "entry": "The 7th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 8,
+      "as_of": "2026-10-06",
+      "headline": "entry number 8",
+      "entry": "The 8th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 9,
+      "as_of": "2026-10-05",
+      "headline": "entry number 9",
+      "entry": "The 9th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 10,
+      "as_of": "2026-10-04",
+      "headline": "entry number 10",
+      "entry": "The 10th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 11,
+      "as_of": "2026-10-03",
+      "headline": "entry number 11",
+      "entry": "The 11th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 12,
+      "as_of": "2026-10-02",
+      "headline": "entry number 12",
+      "entry": "The 12th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 13,
+      "as_of": "2026-10-01",
+      "headline": "entry number 13",
+      "entry": "The 13th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 14,
+      "as_of": "2026-10-27",
+      "headline": "entry number 14",
+      "entry": "The 14th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 15,
+      "as_of": "2026-10-26",
+      "headline": "entry number 15",
+      "entry": "The 15th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 16,
+      "as_of": "2026-10-25",
+      "headline": "entry number 16",
+      "entry": "The 16th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 17,
+      "as_of": "2026-10-24",
+      "headline": "entry number 17",
+      "entry": "The 17th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 18,
+      "as_of": "2026-10-23",
+      "headline": "entry number 18",
+      "entry": "The 18th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 19,
+      "as_of": "2026-10-22",
+      "headline": "entry number 19",
+      "entry": "The 19th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 20,
+      "as_of": "2026-10-21",
+      "headline": "entry number 20",
+      "entry": "The 20th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 21,
+      "as_of": "2026-10-20",
+      "headline": "entry number 21",
+      "entry": "The 21th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 22,
+      "as_of": "2026-10-19",
+      "headline": "entry number 22",
+      "entry": "The 22th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 23,
+      "as_of": "2026-10-18",
+      "headline": "entry number 23",
+      "entry": "The 23th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 24,
+      "as_of": "2026-10-17",
+      "headline": "entry number 24",
+      "entry": "The 24th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 25,
+      "as_of": "2026-10-16",
+      "headline": "entry number 25",
+      "entry": "The 25th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 26,
+      "as_of": "2026-10-15",
+      "headline": "entry number 26",
+      "entry": "The 26th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 27,
+      "as_of": "2026-10-14",
+      "headline": "entry number 27",
+      "entry": "The 27th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 28,
+      "as_of": "2026-10-13",
+      "headline": "entry number 28",
+      "entry": "The 28th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 29,
+      "as_of": "2026-10-12",
+      "headline": "entry number 29",
+      "entry": "The 29th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 30,
+      "as_of": "2026-10-11",
+      "headline": "entry number 30",
+      "entry": "The 30th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 31,
+      "as_of": "2026-10-10",
+      "headline": "entry number 31",
+      "entry": "The 31th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 32,
+      "as_of": "2026-10-09",
+      "headline": "entry number 32",
+      "entry": "The 32th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 33,
+      "as_of": "2026-10-08",
+      "headline": "entry number 33",
+      "entry": "The 33th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 34,
+      "as_of": "2026-10-07",
+      "headline": "entry number 34",
+      "entry": "The 34th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 35,
+      "as_of": "2026-10-06",
+      "headline": "entry number 35",
+      "entry": "The 35th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 36,
+      "as_of": "2026-10-05",
+      "headline": "entry number 36",
+      "entry": "The 36th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 37,
+      "as_of": "2026-10-04",
+      "headline": "entry number 37",
+      "entry": "The 37th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 38,
+      "as_of": "2026-10-03",
+      "headline": "entry number 38",
+      "entry": "The 38th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 39,
+      "as_of": "2026-10-02",
+      "headline": "entry number 39",
+      "entry": "The 39th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    },
+    {
+      "position": 40,
+      "as_of": "2026-10-01",
+      "headline": "entry number 40",
+      "entry": "The 40th entry of forty, written long enough to be a paragraph a reader has to scroll past: it links [the brief](https://github.com/todd450/founding-agents-site/issues/1), quotes a `literal`, and says nothing else. The record is the longest list on this page and the one that grows with every merge, so a snapshot carrying far more entries than today's has to render exactly as today's does."
+    }
+  ]
+}

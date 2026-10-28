@@ -1,0 +1,16 @@
+{{! The record: one entry per row of the snapshot's record_entries, in
+    position order, which is newest first. The newest entry's mark is the
+    "this build" string and every other entry's is its own headline, so the
+    page cannot carry two of them. }}
+  <section class="record">
+    <h2>{{record.heading}}</h2>
+    <p class="col">{{&record.intro}}</p>
+    <ol class="record-list">
+      {{#each record_entries}}
+      <li>
+        <span class="when">{{&record.when}}</span>
+        <p>{{&entry}}</p>
+      </li>
+      {{/each}}
+    </ol>
+  </section>

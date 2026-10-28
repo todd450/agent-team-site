@@ -1,11 +1,16 @@
-"""Tests for the assets this page ships alongside index.html.
+"""Tests for the assets the pages of this site ship alongside them.
 
-The founder's decisions on #14 are what these hold to: the page loads a
+The founder's decisions on #14 are what these hold to: a page loads a
 vendored CSS reset (D1, P1: modern-normalize, committed as one file), and
 every dependency that ships is self-hosted, committed to this repo, with no
 third-party request made when the page loads (D5).
 
-So, for every asset the page loads:
+Asked of every page the site serves, which is the generator's answer and not
+a filename written here (tests/pages.py): a page is a template and a copy
+file from issue #28 on, and the assets it loads are resolved from its own
+URL, because a page served from `<name>/` is not served from the root.
+
+So, for every asset a page loads:
 
 - A vendored copy matches a SHA-256 digest pinned here, so editing it fails
   the check instead of drifting from upstream unnoticed, and it says which
@@ -25,8 +30,9 @@ import unittest
 from html.parser import HTMLParser
 from pathlib import Path
 
+from pages import served_from, served_pages
+
 ROOT = Path(__file__).resolve().parent.parent
-INDEX_HTML = ROOT / "index.html"
 
 # Each asset vendored into this repo, with the upstream release it is a copy
 # of and the SHA-256 of that release's bytes. To take a new upstream version:
@@ -71,9 +77,9 @@ class AssetParser(HTMLParser):
             self.assets.append((tag, attrs, url.strip()))
 
 
-def page_assets():
+def page_assets(page):
     parser = AssetParser()
-    parser.feed(INDEX_HTML.read_text(encoding="utf-8"))
+    parser.feed((ROOT / page).read_text(encoding="utf-8"))
     parser.close()
     return parser.assets
 
@@ -92,13 +98,15 @@ def urls_in_css(text):
     return [url.strip() for pattern in CSS_URL_RES for url in pattern.findall(text)]
 
 
-def local_assets():
-    """Every asset the page fetches from this repo, as (tag, attrs, path)."""
+def local_assets(page):
+    """Every asset this page fetches from this repo, as (tag, attrs, url, path
+    from the repo root) -- the address the page writes and the file the site
+    would hand back for it."""
     found = []
-    for tag, attrs, url in page_assets():
+    for tag, attrs, url in page_assets(page):
         if is_off_site(url) or url.startswith("#"):
             continue
-        found.append((tag, attrs, url.split("#")[0].split("?")[0]))
+        found.append((tag, attrs, url, served_from(page, url)))
     return found
 
 
@@ -146,34 +154,39 @@ class VendoredFileTests(unittest.TestCase):
 
 
 class PageAssetTests(unittest.TestCase):
-    """What the page is allowed to load."""
+    """What a page is allowed to load."""
 
-    def test_every_asset_the_page_loads_is_a_file_in_this_repo(self):
-        assets = local_assets()
-        self.assertTrue(assets, "the page loads no asset of its own at all")
-        for tag, _attrs, path in assets:
-            with self.subTest(path=path):
-                self.assertFalse(path.startswith("/"),
-                                 f"<{tag}> loads {path!r}, a root-relative path that leaves "
-                                 f"this project site on GitHub Pages")
-                self.assertFalse(path.startswith(".."),
-                                 f"<{tag}> loads {path!r}, from outside this site")
-                self.assertTrue((ROOT / path).is_file(),
-                                f"<{tag}> loads {path!r}, which is not in this repo: the page "
-                                f"would 404 on it")
+    def test_every_asset_each_page_loads_is_a_file_in_this_repo(self):
+        for page in served_pages():
+            assets = local_assets(page)
+            self.assertTrue(assets, f"{page} loads no asset of its own at all")
+            for tag, _attrs, url, path in assets:
+                with self.subTest(page=page, asset=url):
+                    self.assertFalse(url.startswith("/"),
+                                     f"<{tag}> on {page} loads {url!r}, a root-relative path that "
+                                     f"leaves this project site on GitHub Pages")
+                    self.assertFalse(path.startswith(".."),
+                                     f"<{tag}> on {page} loads {url!r}, from outside this site")
+                    self.assertTrue((ROOT / path).is_file(),
+                                    f"<{tag}> on {page} loads {url!r}, which the site serves from "
+                                    f"{path!r} and this repo does not hold: the page would 404 "
+                                    f"on it")
 
-    def test_no_stylesheet_the_page_loads_fetches_from_off_this_site(self):
+    def test_no_stylesheet_any_page_loads_fetches_from_off_this_site(self):
         # Self-hosted means self-hosted all the way down: a committed file
         # that opens with @import url(https://fonts...) still makes the page
         # ask a third party for bytes at load (#14, D5).
-        sources = {"index.html": "\n".join(
-            STYLE_BLOCK_RE.findall(INDEX_HTML.read_text(encoding="utf-8")))}
-        for tag, attrs, path in local_assets():
-            # A stylesheet that is missing is the other test's failure to
-            # report, not a crash in this one.
-            if tag == "link" and attrs.get("rel") == "stylesheet" and (ROOT / path).is_file():
-                sources[path] = (ROOT / path).read_text(encoding="utf-8")
-        self.assertIn("index.html", sources)
+        sources = {}
+        for page in served_pages():
+            sources[page] = "\n".join(
+                STYLE_BLOCK_RE.findall((ROOT / page).read_text(encoding="utf-8")))
+            for tag, attrs, _url, path in local_assets(page):
+                # A stylesheet that is missing is the other test's failure to
+                # report, not a crash in this one.
+                if tag == "link" and attrs.get("rel") == "stylesheet" and (ROOT / path).is_file():
+                    sources[path] = (ROOT / path).read_text(encoding="utf-8")
+        self.assertTrue(any(name.endswith(".css") for name in sources),
+                        "no stylesheet of this site was read at all")
         for name, text in sources.items():
             for url in urls_in_css(text):
                 with self.subTest(name=name, url=url):

@@ -1,0 +1,22 @@
+{{! The measures: one row per row of the snapshot's measures, in position
+    order, under one column dated by the newest of them. A measure's standing
+    is a word from the snapshot and becomes that row's class, so the figure is
+    coloured by the fact and not by hand. }}
+  <section class="measures">
+    <h2>{{measures.heading}}</h2>
+    <table>
+      <caption>{{measures.caption}}</caption>
+      <thead>
+        <tr><th scope="col">{{measures.measure}}</th><th scope="col">{{measures.bar}}</th><th scope="col">{{dates.measures}}</th></tr>
+      </thead>
+      <tbody>
+        {{#each measures}}
+        <tr>
+          <td>{{&label}}</td>
+          <td class="figure" data-label="{{measures.bar}}">{{bar}}</td>
+          <td class="figure{{standingClass}}" data-label="{{dates.measuresShort}}">{{current}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </section>

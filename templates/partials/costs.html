@@ -1,0 +1,16 @@
+{{! The costs: one block per row of the snapshot's costs, in position order. A
+    cost's figure is the number alone and its unit the small tail beside it,
+    which the fact may leave empty -- and then there is no tail to draw. }}
+  <section class="costs">
+    <h2>{{costs.heading}}</h2>
+    <p class="col">{{&costs.intro}}</p>
+    <div class="evidence">
+      {{#each costs}}
+      <div class="ev">
+        <span class="ev-figure">{{figure}}{{#if unit}} <span class="ev-unit">{{unit}}</span>{{/if}}</span>
+        <p class="ev-claim"><strong>{{lead}}</strong> {{&claim}}</p>
+        <span class="ev-src">{{source}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </section>
