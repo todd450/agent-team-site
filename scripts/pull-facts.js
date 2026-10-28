@@ -15,6 +15,13 @@
 // leaves the snapshot exactly as it was and exits non-zero
 // (fixtures/failed-read).
 //
+// This file is also the one definition of a valid fact value (decided on #27,
+// 28 Oct 2026). checkSnapshot is the whole of it, the pull runs it on the
+// snapshot it is about to write, and the Python suite asks it through
+// tests/check_facts.js rather than holding a copy -- because two copies of a
+// rule drift, and a copy that drifts is a snapshot a pull writes and the
+// repo's own checks then reject.
+//
 // Node 22 and its standard library only; nothing here ships to the page.
 
 'use strict';
@@ -39,7 +46,7 @@ const READ_TIMEOUT_MS = 15000;
 // optional names the columns a fact may leave empty, because the fact has
 // nothing to put there; every other column has to show a reader something.
 // lists names the columns the tables restrict to a short list of words, with
-// the same words supabase/schema.sql and tests/test_facts.py hold.
+// the same words supabase/schema.sql holds.
 const KINDS = [
   { table: 'status_steps', columns: ['position', 'as_of', 'name', 'state', 'detail'] },
   // A cost's figure is the number alone and its unit the small tail beside
@@ -70,8 +77,8 @@ const ALLOWED_LINK_PREFIXES = [
   'https://todd450.github.io/founding-agents-site',
 ];
 
-// The same rule as tests/links.py, which checks the snapshot and the page;
-// tests/test_links.py runs both copies over the same cases.
+// The cases this rule has to answer are in tests/test_rules.py, which asks
+// this copy -- the only one -- through tests/check_facts.js.
 // A parenthesis is not among the plain URL characters: CommonMark keeps a
 // balanced pair inside a link's destination, so a reader that stops at the
 // first ")" is left holding a prefix of the address and would vouch for a
@@ -85,6 +92,29 @@ const ESCAPE = /%[0-9A-Fa-f]{2}/g;
 const SEPARATOR_ESCAPE = /%(?:2[eEfF]|5[cC]|[01][0-9A-Fa-f]|7[fF])/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+// Characters no fact may carry at all, wherever in the value they sit and
+// whether or not they are inside backticks (decided on #27, 28 Oct 2026).
+// Each one is a character neither a reader of the page nor a reviewer reading
+// the diff can see, and that a human reads the diff is this snapshot's whole
+// safety argument:
+//
+//   U+0000-U+001F, U+007F-U+009F  the C0 and C1 control characters. A value
+//                                 of one of them shows a reader nothing
+//                                 while passing for a value, and a tab goes
+//                                 with them.
+//   U+200B-U+200D, U+2060,        the zero-width characters: no width and no
+//   U+FEFF                        glyph, so a required column can be full of
+//                                 them and still be blank on the page.
+//   U+202A-U+202E, U+2066-U+2069  the direction overrides, embeddings and
+//                                 isolates. They reorder the characters
+//                                 after them, so a fact can read on the page
+//                                 as one claim and be stored in the snapshot
+//                                 as another.
+//
+// A line ending is a control character too, and is reported as the line
+// ending it is rather than by code point: UNREADABLE_TEXT runs first and
+// gives the reason a renderer makes of it.
+const INVISIBLE_CHARACTER = /[\u0000-\u001f\u007f-\u009f\u200b-\u200d\u2060\u202a-\u202e\u2066-\u2069\ufeff]/g;
 // What two backticks quote as code: a short literal, between single
 // backticks, on one line of text that holds nothing a renderer reads before
 // it reads an inline.
@@ -139,7 +169,7 @@ const UNREADABLE_TEXT = [
 // linear in the length of the text. A class that can swallow its own opening
 // character rescans from every one of them, so a value made of a long run of
 // "[" takes the reader minutes rather than milliseconds -- and a fact's text
-// has no length limit (tests/test_links.py pins the measurement).
+// has no length limit (tests/test_rules.py pins the measurement).
 //
 // It costs nothing a fact needs: a destination may hold a balanced pair of
 // parentheses, which this reader must not read as a whole address anyway, and
@@ -216,7 +246,7 @@ function isAllowedLink(link) {
 }
 
 // Where every link in this text points, and whether it also writes one this
-// reader could not read whole. The same reader as tests/links.py.
+// reader could not read whole.
 //
 // A renderer reads more as a link than LINK_TARGET does. CommonMark says link
 // text may hold balanced brackets ("[see [this]](...)"), an image may be
@@ -258,11 +288,30 @@ function isRealDate(value) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
 }
 
+// Every invisible character this value carries, by code point, in the order
+// they are first found -- so the reason a pull gives names the character a
+// reader cannot see for themselves.
+function invisibleCharacters(value) {
+  const found = typeof value === 'string' ? value.match(INVISIBLE_CHARACTER) || [] : [];
+  return [...new Set(found)].map(
+    (character) => `U+${character.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
+}
+
+// A day, and not one that has not happened yet. A fact is true "as of" a day,
+// and the snapshot is stamped with the day it was pulled; either one dated
+// after the day of the pull is a clock, a time zone or a typo, and the page
+// would show a reader a date in the future with nothing downstream in a
+// position to notice (decided on #27, 28 Oct 2026). ISO dates compare as
+// strings, which is the whole reason the snapshot writes them that way.
+function checkDay(where, value, day) {
+  if (!isRealDate(value)) fail(`${where} is not a date: ${JSON.stringify(value)}`);
+  if (value > day) fail(`${where} is dated after the day of the pull (${day}): ${value}`);
+}
+
 // The brackets this text would put on the page as markup -- or, when this
 // reader cannot read the text the way a renderer would, the character that
 // makes it unreadable, because then what is quoted as code, and what the page
-// would show, is nobody's guess. The same reader as tests/links.py;
-// tests/check_links.js runs both copies over the same texts.
+// would show, is nobody's guess.
 function markupOutsideBackticks(value) {
   const unreadable = UNREADABLE_TEXT
     .filter(([, carries]) => carries(value))
@@ -299,6 +348,12 @@ function checkText(where, value) {
     if (UNREADABLE_REASON[found]) fail(`${where} ${UNREADABLE_REASON[found]}`);
     fail(`${where} carries ${found} outside backticks, which would put markup on the page`);
   }
+  const invisible = invisibleCharacters(value);
+  if (invisible.length > 0) {
+    fail(`${where} carries ${invisible.join(', ')}, which a reader cannot see: a control, `
+      + 'zero-width or direction character is refused wherever in a value it sits, inside '
+      + 'backticks or out');
+  }
   const { targets, unreadable } = linkTargets(value);
   if (unreadable) {
     fail(`${where} writes a link in a form this snapshot does not read: a fact writes a link `
@@ -312,8 +367,9 @@ function checkText(where, value) {
 }
 
 // The rows of one table, as they will be written: in position order, each row
-// carrying exactly its columns, each column checked.
-function checkRows(kind, rows) {
+// carrying exactly its columns, each column checked. day is the day of the
+// pull, which no fact may be dated after.
+function checkRows(kind, rows, day) {
   if (!Array.isArray(rows)) fail(`${kind.table}: the answer was not a list of rows`);
   if (rows.length === 0) {
     fail(`${kind.table}: no rows came back, which would empty a section of the page`);
@@ -326,9 +382,7 @@ function checkRows(kind, rows) {
     if (!Number.isInteger(position) || position < 1) {
       fail(`${where} has no position: ${JSON.stringify(position)}`);
     }
-    if (!isRealDate(row.as_of)) {
-      fail(`${where} has no as_of date: ${JSON.stringify(row.as_of)}`);
-    }
+    checkDay(`${where}.as_of`, row.as_of, day);
     const out = { position, as_of: row.as_of };
     for (const column of textColumns) {
       const optional = (kind.optional || []).includes(column);
@@ -370,7 +424,7 @@ function totalFromContentRange(header, table) {
   return Number(total[1]);
 }
 
-async function readTable(kind, { fetchImpl, baseUrl, key, timeoutMs }) {
+async function readTable(kind, { fetchImpl, baseUrl, key, timeoutMs, day }) {
   const url = new URL(`/rest/v1/${kind.table}`, baseUrl);
   url.searchParams.set('select', kind.columns.join(','));
   url.searchParams.set('order', 'position.asc');
@@ -410,7 +464,51 @@ async function readTable(kind, { fetchImpl, baseUrl, key, timeoutMs }) {
   if (!Array.isArray(rows) || rows.length !== total) {
     fail(`${kind.table}: ${Array.isArray(rows) ? rows.length : 0} rows came back of ${total}`);
   }
-  return checkRows(kind, rows);
+  return checkRows(kind, rows, day);
+}
+
+// The one check on a whole snapshot, and the only definition of a valid fact
+// value there is (decided on #27, 28 Oct 2026): the keys the snapshot holds
+// and their order, the day it was pulled on, and every row of every kind by
+// the same rules a read is checked against.
+//
+// Two callers, which is the point. pull() runs it on the snapshot it is about
+// to write, so no pull can leave the repo red; and the Python suite runs it
+// on the committed file through tests/check_facts.js, so what check.sh
+// demands of the snapshot and what a pull enforces cannot be two different
+// rules.
+function checkSnapshot(snapshot, options = {}) {
+  const day = options.today || today();
+  if (snapshot === null || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    fail(`the snapshot is not an object: ${JSON.stringify(snapshot)}`);
+  }
+  const expected = ['pulled_at', ...KINDS.map((kind) => kind.table)];
+  const keys = Object.keys(snapshot);
+  if (keys.join(',') !== expected.join(',')) {
+    fail(`the snapshot's keys are not ${expected.join(', ')}, in that order: ${keys.join(', ')}`);
+  }
+  checkDay('pulled_at', snapshot.pulled_at, day);
+  for (const kind of KINDS) {
+    const rows = snapshot[kind.table];
+    if (!Array.isArray(rows)) fail(`${kind.table} is not a list of rows`);
+    rows.forEach((row, index) => {
+      const where = `${kind.table}[${index}]`;
+      if (row === null || typeof row !== 'object' || Array.isArray(row)) {
+        fail(`${where} is not a row`);
+      }
+      if (Object.keys(row).join(',') !== kind.columns.join(',')) {
+        fail(`${where} does not carry exactly ${kind.columns.join(', ')}, in that order: `
+          + `${Object.keys(row).join(', ')}`);
+      }
+    });
+    // checkRows puts the rows in position order and refuses a gap or a
+    // repeat, so rows a reader would see out of order are the ones it moved.
+    if (serialise(checkRows(kind, rows, day)) !== serialise(rows)) {
+      fail(`${kind.table} is not stored in position order, so the page would read in one order `
+        + 'and the snapshot in another');
+    }
+  }
+  return snapshot;
 }
 
 function serialise(snapshot) {
@@ -423,11 +521,19 @@ function factsOf(snapshot) {
   return serialise(facts);
 }
 
+// The snapshot as it stands, as bytes and as facts: the bytes say whether
+// this pull changes the file at all, and the facts say what it said.
 function readPrevious(out) {
+  let text;
   try {
-    return JSON.parse(fs.readFileSync(out, 'utf8'));
+    text = fs.readFileSync(out, 'utf8');
   } catch {
-    return null;
+    return { text: null, snapshot: null };
+  }
+  try {
+    return { text, snapshot: JSON.parse(text) };
+  } catch {
+    return { text, snapshot: null };
   }
 }
 
@@ -446,11 +552,13 @@ function today() {
  * @returns {{path: string, changed: boolean}}
  */
 async function pull(options = {}) {
+  const day = options.today || today();
   const settings = {
     fetchImpl: options.fetchImpl || globalThis.fetch,
     baseUrl: options.baseUrl || SUPABASE_URL,
     key: options.key || SUPABASE_PUBLISHABLE_KEY,
     timeoutMs: options.timeoutMs || READ_TIMEOUT_MS,
+    day,
   };
   const out = options.out || SNAPSHOT_PATH;
 
@@ -465,12 +573,27 @@ async function pull(options = {}) {
   // pulled_at is the day these facts were last pulled and found to differ, so
   // a pull that finds nothing new rewrites the same bytes and shows an empty
   // diff rather than a date change nobody needs to review.
+  //
+  // A stamp already in the file is carried forward only if it is a day that
+  // has happened: a fast clock, or a hand edit, writes one in the future that
+  // no later pull would ever look at again, and the page would show a reader
+  // a date that has not come. Such a stamp is replaced with the day of the
+  // pull, so the next pull is also the fix.
   const previous = readPrevious(out);
-  const unchanged = previous !== null && factsOf(previous) === serialise(facts);
-  const pulled_at = unchanged && isRealDate(previous.pulled_at) ? previous.pulled_at : (options.today || today());
+  const unchanged = previous.snapshot !== null && factsOf(previous.snapshot) === serialise(facts);
+  const stamp = unchanged ? previous.snapshot.pulled_at : null;
+  const carried = isRealDate(stamp) && stamp <= day;
+  const snapshot = { pulled_at: carried ? stamp : day, ...facts };
 
-  write(out, serialise({ pulled_at, ...facts }));
-  return { path: out, changed: !unchanged };
+  // The pull's own output, by the rules check.sh holds the committed snapshot
+  // to -- the same function, not a second copy of it. A pull that wrote a
+  // snapshot the checks then rejected would have to be undone by hand in the
+  // reviewed file, so it refuses instead.
+  checkSnapshot(snapshot, { today: day });
+  const text = serialise(snapshot);
+  write(out, text);
+  // What the diff will show: the bytes that were there against the bytes now.
+  return { path: out, changed: previous.text !== text };
 }
 
 // The working file this script writes beside the snapshot, named for the
@@ -527,9 +650,12 @@ if (require.main === module) {
 
 module.exports = {
   pull,
+  checkSnapshot,
   isAllowedLink,
   linkTargets,
   markupOutsideBackticks,
+  invisibleCharacters,
+  ALLOWED_LINK_PREFIXES,
   KINDS,
   SNAPSHOT_PATH,
   SUPABASE_URL,

@@ -1,0 +1,9 @@
+{
+  "name": "a fact dated after the day of the pull",
+  "why": "A fact cannot be true as of a day that has not happened yet. A stamp ahead of the day of the pull is a clock, a time zone or a typo, and the page would show a reader a date in the future with nothing downstream in a position to notice. Refused (decided on #27, 28 Oct 2026). The rows here are the ordinary ones; it is the day of the pull that is earlier than they are.",
+  "outcome": "fail",
+  "runs": 1,
+  "today": "2026-10-20",
+  "fails": "is dated after the day of the pull (2026-10-20)",
+  "responses": {}
+}

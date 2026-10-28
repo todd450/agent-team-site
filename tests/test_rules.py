@@ -1,12 +1,13 @@
-"""Tests for the three rules about a fact's text: where a link may point, how
-the text is read to find its links, and what it quotes as code rather than
-putting on the page as markup.
+"""The cases the rules about a fact's text have to answer: where a link may
+point, how the text is read to find its links, what it quotes as code rather
+than putting on the page as markup, and which characters it may not carry at
+all.
 
-All three are written twice, because the two places that need them cannot
-share code: `scripts/pull-facts.js` is the gate on what enters the facts
-snapshot, and `tests/links.py` is what the suite checks index.html and the
-snapshot with. So the cases live here once and both copies answer all of them,
-and a hole opened in one is a failure here rather than a link on the page.
+The rules live in one place, `scripts/pull-facts.js`, because that is the gate
+on what enters the facts snapshot (decided on #27, 28 Oct 2026). Every case
+here is put to that one definition through `tests/rules.py`, so a hole opened
+in it is a failure here rather than a link on the page -- and there is no
+second copy to drift from it, which is what used to go wrong.
 
 What the cases pin:
 
@@ -22,22 +23,19 @@ What the cases pin:
   way -- a line ending, a backslash escape, a character reference, a cell
   separator, backticks that do not pair -- is reported rather than read,
   because a tag a reader thinks is quoted is an element on the page.
-- Both readers answer the longest text promptly. A fact's text has no length
+- A character neither a reader of the page nor a reviewer reading the diff
+  can see is reported wherever it sits: a control character, a zero-width
+  character, a direction override or isolate.
+- The readers answer the longest text promptly. A fact's text has no length
   limit, so a reader that rescans it from every opening bracket turns one long
   value into a pull, a check.sh run and a CI run that take minutes.
 """
 
-import json
-import shutil
-import subprocess
 import time
 import unittest
-from pathlib import Path
 
-from links import (PAGES_PREFIX, REPO_PREFIX, allowed_link, link_targets,
-                   markup_outside_backticks)
-
-CHECK_LINKS_JS = Path(__file__).resolve().parent / "check_links.js"
+from rules import (PAGES_PREFIX, REPO_PREFIX, allowed_links, invisible_in,
+                   links_in, markup_in)
 
 # (link, why it is in the allowlist)
 ALLOWED = [
@@ -218,6 +216,54 @@ MARKUP = [
 ]
 
 
+# A fact's text, and the characters in it a reader cannot see. Each is refused
+# outright, wherever in the value it sits and whether or not it is inside
+# backticks (decided on #27, 28 Oct 2026) -- not only when it is the whole of
+# a value, because the value that matters is the ordinary-looking one with one
+# of these hidden in it.
+#
+# These are the two ways a fact can get past the review this snapshot's safety
+# rests on: a value a reader sees nothing of, which fills a required column
+# and leaves the page blank, and a value whose stored order and displayed
+# order are not the same, which lets the page show a reader something other
+# than what the fact says while every check is green. Neither shows in
+# `git diff` either: JSON.stringify writes them into the snapshot raw.
+# (text, the code points reported)
+INVISIBLE = [
+    ("Nothing here is hidden at all.", []),
+    (f"A literal `<li>` and a [link]({REPO_PREFIX}/pull/35).", []),
+    # An em dash, an accent, a right-to-left script and a CJK word are
+    # ordinary text: the rule is about what cannot be seen, not about what
+    # is not English.
+    ("Recorded 26 Oct 2026 \u2014 caf\u00e9, \u05e2\u05d1\u05e8\u05d9\u05ea, \u4e2d\u6587.", []),
+    # A value made of them, which is neither empty nor whitespace and shows
+    # a reader nothing: a required column filled and the page still blank.
+    ("\u001f", ["U+001F"]),
+    ("\u200b\u200b\u200b", ["U+200B"]),
+    ("\ufeff", ["U+FEFF"]),
+    # And the same characters inside a value that reads perfectly well.
+    ("A step\u0085 that is done.", ["U+0085"]),
+    ("A figure of 5,\u200c410 commits.", ["U+200C"]),
+    ("Two words joined\u2060up.", ["U+2060"]),
+    # Every direction override, embedding and isolate: each reorders the
+    # text after it, so the page and the snapshot can say different things.
+    ("Done, see the plan.\u202a", ["U+202A"]),
+    ("Done, see the plan.\u202b", ["U+202B"]),
+    ("Done, see the plan.\u202c", ["U+202C"]),
+    ("Done, see the plan.\u202d", ["U+202D"]),
+    ("Done, see the plan.\u202e and nothing else.", ["U+202E"]),
+    ("Done, see the plan.\u2066", ["U+2066"]),
+    ("Done, see the plan.\u2067", ["U+2067"]),
+    ("Done, see the plan.\u2068", ["U+2068"]),
+    ("Done, see the plan.\u2069", ["U+2069"]),
+    # Inside backticks is no different: the rule is about a character
+    # nobody can see, not about what a renderer would do with it.
+    ("The flag `x\u200by` is set.", ["U+200B"]),
+    # Reported once each, in the order they are first found, so the reason
+    # a pull gives names them all.
+    ("A\u200bb\u202ec\u200bd", ["U+200B", "U+202E"]),
+]
+
 # A fact's text has no length limit: a Postgres text column has none, the page
 # already carries a fact of 1,423 characters, and nobody writing one counts.
 # So a reader has to be linear in the length of the text it reads. A reader
@@ -242,121 +288,71 @@ def long_run(run):
 
 
 class LinkRuleTests(unittest.TestCase):
-    """tests/links.py, the copy the suite checks the page and the snapshot
-    with."""
+    """Where a link in a fact, or on the page, may point."""
 
     def test_a_link_into_this_repo_or_its_site_is_allowed(self):
-        for link, why in ALLOWED:
+        for (link, why), allowed in zip(ALLOWED, allowed_links(link for link, _ in ALLOWED)):
             with self.subTest(link=link):
-                self.assertTrue(allowed_link(link), f"{why} is this site")
+                self.assertTrue(allowed, f"{why} is this site")
 
     def test_a_link_that_lands_anywhere_else_is_refused(self):
-        for link, where in REFUSED:
+        for (link, where), allowed in zip(REFUSED, allowed_links(link for link, _ in REFUSED)):
             with self.subTest(link=link):
-                self.assertFalse(allowed_link(link), f"this link goes to {where}")
+                self.assertFalse(allowed, f"this link goes to {where}")
 
 
 class LinkReaderTests(unittest.TestCase):
-    """tests/links.py again: finding the links in a fact's text, and saying
-    so when a link cannot be read whole."""
+    """Finding the links in a fact's text, and saying so when a link cannot be
+    read whole."""
 
     def test_every_link_in_a_text_it_can_read_is_found(self):
-        for text, targets in READABLE:
+        for (text, targets), read in zip(READABLE, links_in(text for text, _ in READABLE)):
             with self.subTest(text=text):
-                self.assertEqual(link_targets(text), (targets, False))
+                self.assertEqual(read, (targets, False))
 
     def test_a_link_it_cannot_read_whole_is_reported_rather_than_missed(self):
-        for text, renders_as in UNREADABLE:
+        for (text, renders_as), (_, unreadable) in zip(
+                UNREADABLE, links_in(text for text, _ in UNREADABLE)):
             with self.subTest(text=text):
-                _, unreadable = link_targets(text)
                 self.assertTrue(unreadable, f"a renderer makes {renders_as} of this")
 
 
 class MarkupReaderTests(unittest.TestCase):
-    """tests/links.py once more: what a fact's text quotes as code, and what
-    it would put on the page as markup."""
+    """What a fact's text quotes as code, and what it would put on the page as
+    markup."""
 
     def test_only_a_bracket_a_renderer_would_emit_is_reported(self):
-        for text, brackets in MARKUP:
+        for (text, brackets), reported in zip(MARKUP, markup_in(text for text, _ in MARKUP)):
             with self.subTest(text=text):
-                self.assertEqual(markup_outside_backticks(text), brackets)
+                self.assertEqual(reported, brackets)
+
+
+class InvisibleCharacterTests(unittest.TestCase):
+    """The characters a fact may not carry at all, because nobody reading the
+    page or the diff can see them."""
+
+    def test_every_character_a_reader_cannot_see_is_reported(self):
+        for (text, found), reported in zip(INVISIBLE, invisible_in(text for text, _ in INVISIBLE)):
+            with self.subTest(text=text):
+                self.assertEqual(reported, found)
 
 
 class LongTextTests(unittest.TestCase):
-    """tests/links.py on the longest text: the readers answer a value far
-    longer than any fact promptly, however much of it is punctuation."""
+    """The longest text: the readers a pull runs answer a value far longer
+    than any fact promptly, however much of it is punctuation."""
 
     def test_a_long_run_of_one_character_is_read_promptly(self):
-        for run in LONG_RUNS:
-            with self.subTest(run=run):
-                text = long_run(run)
-                started = time.monotonic()
-                link_targets(text)
-                markup_outside_backticks(text)
-                elapsed = time.monotonic() - started
-                self.assertLess(elapsed, LONG_RUN_SECONDS,
-                                f"reading {len(text)} characters of {run!r} took {elapsed:.1f}s: "
-                                "a reader that rescans the text makes a pull take minutes")
-
-
-class PullerAgreesTests(unittest.TestCase):
-    """scripts/pull-facts.js, the copies that decide what may enter the
-    snapshot. They must answer every case the same way."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.node = shutil.which("node")
-
-    def ask_the_puller(self, links=(), texts=(), markup=()):
-        self.assertIsNotNone(self.node, "node is needed to run the puller's copy of the rule")
-        result = subprocess.run(
-            [self.node, str(CHECK_LINKS_JS)],
-            input=json.dumps({"links": list(links), "texts": list(texts),
-                              "markup": list(markup)}),
-            capture_output=True, text=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        return json.loads(result.stdout)
-
-    def test_the_puller_answers_every_case_the_same_way(self):
-        cases = [(link, True) for link, _ in ALLOWED] + [(link, False) for link, _ in REFUSED]
-        verdicts = self.ask_the_puller(links=[link for link, _ in cases])["links"]
-        self.assertEqual(len(verdicts), len(cases))
-        for (link, expected), answer in zip(cases, verdicts):
-            with self.subTest(link=link):
-                self.assertEqual(answer, expected,
-                                 "the puller's copy of the link rule and tests/links.py disagree")
-
-    def test_the_puller_reads_every_text_the_same_way(self):
-        texts = [text for text, _ in READABLE] + [text for text, _ in UNREADABLE]
-        answers = self.ask_the_puller(texts=texts)["texts"]
-        self.assertEqual(len(answers), len(texts))
-        for text, answer in zip(texts, answers):
-            with self.subTest(text=text):
-                targets, unreadable = link_targets(text)
-                self.assertEqual([answer["targets"], answer["unreadable"]],
-                                 [targets, unreadable],
-                                 "the puller's link reader and tests/links.py disagree")
-
-    def test_the_puller_reads_a_long_run_of_one_character_promptly_too(self):
-        # The puller is the copy a pull runs, so this is the measurement that
-        # says a pull cannot be made to spin on one long value.
         texts = [long_run(run) for run in LONG_RUNS]
         started = time.monotonic()
-        answers = self.ask_the_puller(texts=texts, markup=texts)
+        read = links_in(texts)
+        reported = markup_in(texts)
         elapsed = time.monotonic() - started
-        self.assertEqual(len(answers["texts"]), len(texts))
+        self.assertEqual(len(read), len(texts))
+        self.assertEqual(len(reported), len(texts))
         self.assertLess(elapsed, LONG_RUN_SECONDS,
-                        f"the puller took {elapsed:.1f}s over {len(texts)} long values: a reader "
-                        "that rescans the text makes a pull take minutes")
-
-    def test_the_puller_reads_a_text_s_markup_the_same_way(self):
-        texts = [text for text, _ in MARKUP]
-        answers = self.ask_the_puller(markup=texts)["markup"]
-        self.assertEqual(len(answers), len(texts))
-        for text, answer in zip(texts, answers):
-            with self.subTest(text=text):
-                self.assertEqual(answer, markup_outside_backticks(text),
-                                 "the puller's code-span reader and tests/links.py disagree")
+                        f"reading {len(texts)} values of {LONG_RUN_LENGTH} characters took "
+                        f"{elapsed:.1f}s: a reader that rescans the text makes a pull, and with "
+                        "it check.sh and CI, take minutes")
 
 
 if __name__ == "__main__":

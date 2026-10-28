@@ -1,0 +1,20 @@
+{
+  "name": "a step whose state is one control character",
+  "why": "A C0 or C1 control character shows a reader nothing: a step would reach the page with a name and no visible state beside it, and JSON.stringify writes the character into the snapshot where a reviewer reading the diff cannot see it either. Refused outright, wherever in a value it sits and whether or not it is inside backticks (decided on #27, 28 Oct 2026).",
+  "outcome": "fail",
+  "runs": 1,
+  "fails": "status_steps[0].state carries U+001F",
+  "responses": {
+    "status_steps": {
+      "rows": [
+        {
+          "position": 1,
+          "as_of": "2026-10-24",
+          "name": "main requires a pull request",
+          "state": "\u001f",
+          "detail": "Repository settings are not public, so this line carries a date and no link."
+        }
+      ]
+    }
+  }
+}

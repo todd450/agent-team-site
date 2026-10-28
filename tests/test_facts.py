@@ -8,11 +8,18 @@ stay offline and deterministic and a Supabase outage can never freeze a merge.
 Two halves:
 
 - The snapshot itself: all four kinds, every row dated and in place, no markup
-  in any text column, and no link off this site.
+  in any text column, no character a reader cannot see, and no link off this
+  site.
 - The puller, `scripts/pull-facts.js`: a read that is refused, slow, short or
   carrying an unusable row leaves the snapshot exactly as it was and exits
   non-zero. Every scenario in fixtures/failed-read is run, so a scenario added
   to that folder is run here without this file changing.
+
+What a valid fact value is, this file does not say: the puller is the one
+definition of it (decided on #27, 28 Oct 2026) and `tests/rules.py` asks it
+through `node`. So the rules a pull enforces and the rules check.sh holds the
+committed snapshot to are the same rules, and no pull can write a file the
+suite then rejects.
 
 No network: tests/stub_pull.js hands the puller a stubbed fetch and makes the
 real one throw.
@@ -24,14 +31,12 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from datetime import date
 from pathlib import Path
 
-# The one Python copy of the rules for a fact's text -- where a link may
-# point, how its links are found, and what it quotes as code -- shared with
-# the page's own link tests in tests/test_shell.py and checked against the
-# puller's copies in tests/test_links.py.
-from links import allowed_link, link_targets, markup_outside_backticks
+# The puller's own rules, asked through node. Nothing in this file reimplements
+# one.
+from rules import (allowed_links, invisible_in, kinds, links_in, markup_in,
+                   snapshot_problems)
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
@@ -45,34 +50,17 @@ MIGRATIONS = ROOT / "supabase" / "migrations"
 SUPABASE_SQL = sorted((ROOT / "supabase").glob("**/*.sql"))
 FAILED_READ = ROOT / "fixtures" / "failed-read"
 STUB_PULL = Path(__file__).resolve().parent / "stub_pull.js"
+RULES_PY = Path(__file__).resolve().parent / "rules.py"
 
 # The four kinds, in the order the snapshot holds them, and the columns each
-# row carries. This is the shape the generator is written against.
-KINDS = {
-    "status_steps": ["position", "as_of", "name", "state", "detail"],
-    # A cost's figure is the number alone and its unit the small tail beside
-    # it ("61,365" and "lines, in 8 days"), because that is how the page shows
-    # them -- two elements, two sizes. Folded into one string they could not
-    # be told apart again without markup in the text, which no fact carries.
-    "costs": ["position", "as_of", "figure", "unit", "lead", "claim", "source"],
-    "measures": ["position", "as_of", "label", "bar", "current", "standing"],
-    "record_entries": ["position", "as_of", "headline", "entry"],
-}
+# row carries -- as the puller defines them, which is the shape the generator
+# is written against. A cost's figure is the number alone and its unit the
+# small tail beside it ("61,365" and "lines, in 8 days"), because that is how
+# the page shows them: two elements, two sizes. Folded into one string they
+# could not be told apart again without markup in the text, which no fact
+# carries.
+KINDS = kinds()
 
-ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-STANDINGS = {"hit", "pending", "miss", ""}
-# The two columns a fact may leave empty, because the fact has nothing to put
-# there: a cost whose figure stands alone with no tail beside it, and a measure
-# with no bar to be judged against. Every other text column has to show a
-# reader something, and the empty string is the only empty either of these two
-# may hold -- a column of spaces or of one tab shows a reader nothing while
-# passing for a value.
-OPTIONAL = {("costs", "unit"), ("measures", "standing")}
-# The columns the tables restrict to a short list of words
-# (supabase/schema.sql: check (standing in ('hit', 'pending', 'miss'))). A
-# snapshot carrying anything else is one the page cannot render, so the puller
-# refuses it and this says so of whatever snapshot it wrote.
-LISTS = {("measures", "standing"): STANDINGS}
 ADD_COLUMN_RE = re.compile(r"alter table (\w+) add column (\w+)")
 # The working file write() moves over the snapshot, named for the process that
 # wrote it. A run killed between the write and the rename leaves one behind.
@@ -82,15 +70,24 @@ WORKING_FILE = "facts.json.4242.tmp"
 NEIGHBOUR = "facts.json.bak"
 
 
-def unchecked_links(value):
-    """Every link in this text that nothing can vouch for: what each
-    [text](url) points at, when it lands off this site -- and the text itself
-    when it writes a link in any other form, a bare address included, because
-    then the destination a renderer would use is one no allowlist ever saw."""
-    targets, unreadable = link_targets(value)
-    outside = [target for target in targets if not allowed_link(target)]
-    return (["a link written in a form the reader does not read"]
-            if unreadable else []) + outside
+def unchecked_links(values):
+    """For each of these texts, every link in it that nothing can vouch for:
+    what each [text](url) points at, when it lands off this site -- and the
+    text itself when it writes a link in any other form, a bare address
+    included, because then the destination a renderer would use is one no
+    allowlist ever saw.
+
+    Both questions go to the puller, in one call for all the values.
+    """
+    read = links_in(values)
+    verdicts = iter(allowed_links([target for targets, _ in read for target in targets]))
+    unchecked = []
+    for targets, unreadable in read:
+        # One verdict per target, in the order they were handed over.
+        off_site = [target for target in targets if not next(verdicts)]
+        unchecked.append((["a link written in a form the reader does not read"]
+                          if unreadable else []) + off_site)
+    return unchecked
 
 
 EV_BLOCK_RE = re.compile(r'<div class="ev">(.*?)</div>', re.DOTALL)
@@ -131,83 +128,41 @@ def sql_literals(block):
             if match.group(1) is not None]
 
 
-def parse_iso_date(value):
-    """The date this fact is true as of, or None if it is not a date."""
-    if not isinstance(value, str) or not ISO_DATE_RE.match(value):
-        return None
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        return None
-
-
 def load(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def text_values(snapshot):
+    """Every text value in a snapshot, with where it came from: one list, so
+    the puller is asked about all of them in one call."""
+    return [(f"{kind}[{index}].{column}", row[column])
+            for kind, columns in KINDS.items()
+            for index, row in enumerate(snapshot[kind])
+            for column in columns[2:]]
+
+
 class SnapshotRulesMixin:
-    """The rules the snapshot must satisfy, however it was produced -- the one
-    in the repo, and any the puller writes during these tests."""
+    """The rules a snapshot must satisfy, however it was produced -- the one
+    in the repo, and any the puller writes during these tests -- asked of the
+    puller, which is the only place they are written down."""
 
-    def assert_snapshot_is_sound(self, snapshot):
-        self.assertIsInstance(snapshot, dict)
-        self.assertIsNotNone(parse_iso_date(snapshot.get("pulled_at")),
-                             f"pulled_at is not a date: {snapshot.get('pulled_at')!r}")
-        for kind, columns in KINDS.items():
-            with self.subTest(kind=kind):
-                rows = snapshot.get(kind)
-                self.assertIsInstance(rows, list, f"{kind} is missing from the snapshot")
-                self.assertTrue(rows, f"{kind} has no rows")
-                self.assert_rows_are_sound(kind, rows, columns)
-
-    def assert_rows_are_sound(self, kind, rows, columns):
-        positions = []
-        for index, row in enumerate(rows):
-            with self.subTest(kind=kind, row=index):
-                self.assertEqual(list(row.keys()), columns,
-                                 f"{kind} row {index} does not carry exactly its columns")
-                self.assertIsInstance(row["position"], int)
-                self.assertNotIsInstance(row["position"], bool)
-                positions.append(row["position"])
-                self.assertIsNotNone(parse_iso_date(row["as_of"]),
-                                     f"{kind} row {index} has no as_of date: {row['as_of']!r}")
-                for column in columns[2:]:
-                    value = row[column]
-                    self.assertIsInstance(value, str,
-                                          f"{kind}.{column} is not text: {value!r}")
-                    # An optional column holds "" when the fact has nothing to
-                    # put there; anything else that shows a reader nothing is
-                    # a blank where the page's largest figure, or a step's
-                    # state, goes.
-                    if not ((kind, column) in OPTIONAL and value == ""):
-                        self.assertTrue(value.strip(),
-                                        f"{kind} row {index} has a blank {column}: {value!r}")
-                    if (kind, column) in LISTS:
-                        self.assertIn(value, LISTS[(kind, column)],
-                                      f"{kind} row {index} has a {column} that is not one of "
-                                      f"{sorted(LISTS[(kind, column)])}: {value!r}")
-        self.assertEqual(positions, list(range(1, len(rows) + 1)),
-                         f"{kind} positions are not 1..n in order, with no gap and no repeat: "
-                         f"{positions!r}")
+    def assert_snapshot_is_sound(self, snapshot, today=None):
+        self.assertEqual(snapshot_problems(snapshot, today), [],
+                         "the puller's own rules reject this snapshot")
 
     def assert_no_markup(self, snapshot):
-        for kind, columns in KINDS.items():
-            for row in snapshot[kind]:
-                for column in columns[2:]:
-                    with self.subTest(kind=kind, position=row["position"], column=column):
-                        self.assertEqual(
-                            markup_outside_backticks(row[column]), [],
-                            f"{kind}.{column} could put markup on the page: {row[column]!r}")
+        where, values = zip(*text_values(snapshot))
+        for place, value, reported in zip(where, values, markup_in(values)):
+            with self.subTest(value=place):
+                self.assertEqual(reported, [],
+                                 f"{place} could put markup on the page: {value!r}")
 
     def assert_links_are_allowed(self, snapshot):
-        for kind, columns in KINDS.items():
-            for row in snapshot[kind]:
-                for column in columns[2:]:
-                    with self.subTest(kind=kind, position=row["position"], column=column):
-                        self.assertEqual(
-                            unchecked_links(row[column]), [],
-                            f"{kind}.{column} carries a link nothing can vouch for: "
-                            f"{row[column]!r}")
+        where, values = zip(*text_values(snapshot))
+        for place, value, unchecked in zip(where, values, unchecked_links(values)):
+            with self.subTest(value=place):
+                self.assertEqual(unchecked, [],
+                                 f"{place} carries a link nothing can vouch for: {value!r}")
 
 
 class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
@@ -218,6 +173,10 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
         self.snapshot = load(SNAPSHOT)
 
     def test_all_four_kinds_dated_and_in_place(self):
+        # The whole of it, by the puller's own rules: the four kinds in order,
+        # every row carrying exactly its columns, positions 1..n with no gap
+        # and no repeat, every value a value a reader can see, every date a
+        # real day and none of them after today.
         self.assert_snapshot_is_sound(self.snapshot)
 
     def test_no_text_column_carries_markup_outside_backticks(self):
@@ -225,6 +184,15 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
 
     def test_every_url_in_a_fact_is_in_the_page_s_allowlist(self):
         self.assert_links_are_allowed(self.snapshot)
+
+    def test_no_text_column_carries_a_character_a_reader_cannot_see(self):
+        # A control, zero-width or direction character in a reviewed file is
+        # invisible in `git diff` as well as on the page, so the review this
+        # snapshot's safety rests on cannot see it either.
+        where, values = zip(*text_values(self.snapshot))
+        for place, value, found in zip(where, values, invisible_in(values)):
+            with self.subTest(value=place):
+                self.assertEqual(found, [], f"{place} carries {found}: {value!r}")
 
     def test_each_cost_the_page_shows_keeps_its_figure_and_its_unit_apart(self):
         # The snapshot is what the page will be generated from, so whatever
@@ -241,13 +209,61 @@ class SnapshotTests(unittest.TestCase, SnapshotRulesMixin):
                 self.assertEqual(row["figure"], cost["figure"])
                 self.assertEqual(row["unit"], cost["unit"])
 
-    def test_the_snapshot_holds_the_four_kinds_and_nothing_else(self):
-        self.assertEqual(list(self.snapshot.keys()), ["pulled_at"] + list(KINDS),
-                         "the snapshot's keys are not pulled_at then the four kinds, in order")
-
     def test_the_file_ends_in_one_newline(self):
         text = SNAPSHOT.read_text(encoding="utf-8")
         self.assertTrue(text.endswith("}\n") and not text.endswith("\n\n"))
+
+
+class HandEditedSnapshotTests(unittest.TestCase):
+    """The snapshot is machine-written, and it is also a file a person can
+    edit: a pull that picks up a fact the page has not caught up with is fixed
+    by hand today. None of these is a file a pull would ever write, so this
+    check is the only thing between each of them and the page -- and it is the
+    puller's own, so what it refuses on the way in it refuses here too."""
+
+    def setUp(self):
+        self.snapshot = load(SNAPSHOT)
+        # The day the committed file was pulled on: the snapshot has to be
+        # sound as of its own day, whenever this suite happens to run.
+        self.day = self.snapshot["pulled_at"]
+
+    def assert_refused(self, edit, fragment):
+        snapshot = json.loads(json.dumps(self.snapshot))
+        edit(snapshot)
+        problems = snapshot_problems(snapshot, self.day)
+        self.assertTrue(problems, "this snapshot should have been refused")
+        self.assertIn(fragment, problems[0])
+
+    def test_the_committed_file_is_sound_as_of_the_day_it_was_pulled(self):
+        self.assertEqual(snapshot_problems(self.snapshot, self.day), [])
+
+    def test_a_kind_dropped_from_the_file_is_refused(self):
+        # A section of the page with nothing to render, which a generator
+        # would either skip or crash on.
+        self.assert_refused(lambda facts: facts.pop("measures"), "the snapshot's keys are not")
+
+    def test_rows_stored_out_of_position_order_are_refused(self):
+        # The order the rows are stored in is the order the page shows them:
+        # the record reads newest first, and the steps read first to last.
+        self.assert_refused(lambda facts: facts["status_steps"].reverse(),
+                            "is not stored in position order")
+
+    def test_a_row_missing_one_of_its_columns_is_refused(self):
+        self.assert_refused(lambda facts: facts["costs"][0].pop("unit"),
+                            "does not carry exactly")
+
+    def test_a_value_carrying_an_invisible_character_is_refused(self):
+        self.assert_refused(
+            lambda facts: facts["measures"][0].update(label="Merges\u200b nobody made"),
+            "carries U+200B")
+
+    def test_a_standing_off_the_list_is_refused(self):
+        self.assert_refused(lambda facts: facts["measures"][0].update(standing="shipped"),
+                            "is not one of hit, pending, miss")
+
+    def test_a_fact_dated_after_the_day_of_the_pull_is_refused(self):
+        self.assert_refused(lambda facts: facts["record_entries"][0].update(as_of="2099-01-01"),
+                            "is dated after the day of the pull")
 
 
 class SchemaAndSeedTests(unittest.TestCase):
@@ -298,14 +314,20 @@ class SchemaAndSeedTests(unittest.TestCase):
         # change in supabase/migrations wrote since -- has to be a row the
         # puller would accept, or a pull fails from the start.
         for path in sorted(SUPABASE_SQL):
-            for literal in sql_literals(path.read_text(encoding="utf-8")):
+            literals = sql_literals(path.read_text(encoding="utf-8"))
+            for literal, markup, unchecked, invisible in zip(
+                    literals, markup_in(literals), unchecked_links(literals),
+                    invisible_in(literals)):
                 with self.subTest(file=path.name, value=literal[:40]):
-                    self.assertEqual(markup_outside_backticks(literal), [],
+                    self.assertEqual(markup, [],
                                      f"a fact in {path.name} could put markup on the page: "
                                      f"{literal!r}")
-                    self.assertEqual(unchecked_links(literal), [],
+                    self.assertEqual(unchecked, [],
                                      f"a fact in {path.name} carries a link nothing can "
                                      f"vouch for: {literal!r}")
+                    self.assertEqual(invisible, [],
+                                     f"a fact in {path.name} carries a character a reader "
+                                     f"cannot see: {literal!r}")
 
     def test_every_column_a_change_added_to_the_live_tables_is_in_the_schema(self):
         # schema.sql is the shape a fresh project gets and migrations/ is what
@@ -360,6 +382,25 @@ class PullerSourceTests(unittest.TestCase):
                                 f"the puller must use Node's standard library only: {name!r}")
 
 
+class OneDefinitionTests(unittest.TestCase):
+    """What a valid fact value is, is written down once -- in the puller
+    (decided on #27, 28 Oct 2026). The rules used to be written twice, here
+    and there, and the two drifted: a value the pull accepted and this suite
+    rejected was a reviewed snapshot that had to be hand-edited before it
+    could ship."""
+
+    def test_the_suite_asks_the_puller_rather_than_answering_for_itself(self):
+        # tests/rules.py is the Python side of the one definition, and it
+        # defines nothing: it hands questions to node and returns the
+        # answers. A pattern of its own would be the second copy coming back,
+        # so there is none to find.
+        source = RULES_PY.read_text(encoding="utf-8")
+        for answering in ("import re", "re.compile", "re.search", "re.match"):
+            self.assertNotIn(answering, source,
+                             f"tests/rules.py reads a fact's text itself ({answering!r}): the "
+                             f"puller is the only place a rule about one lives")
+
+
 def scenarios():
     return sorted(path for path in FAILED_READ.glob("*.json") if path.name != "rows.json")
 
@@ -378,9 +419,13 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
         return Path(self.enterContext(tempfile.TemporaryDirectory()))
 
     def run_puller(self, scenario, out, today=None):
+        # A scenario may name the day the pull happens on, so a read whose
+        # facts are dated after that day is a scenario in the folder like any
+        # other. An explicit day wins over it.
+        day = today or load(scenario).get("today")
         command = [self.node, str(STUB_PULL), str(scenario), str(out)]
-        if today is not None:
-            command.append(today)
+        if day is not None:
+            command.append(day)
         return subprocess.run(command, capture_output=True, text=True, timeout=60, cwd=str(ROOT))
 
     def test_fixtures_cover_both_a_good_read_and_failing_ones(self):
@@ -398,7 +443,10 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
                 result = self.run_puller(path, out)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 snapshot = load(out)
-                self.assert_snapshot_is_sound(snapshot)
+                # By the same rules check.sh holds the committed snapshot to,
+                # which is the one definition of them: no pull may write a
+                # file this suite would then reject.
+                self.assert_snapshot_is_sound(snapshot, load(path).get("today"))
                 self.assert_no_markup(snapshot)
                 self.assert_links_are_allowed(snapshot)
 
@@ -427,17 +475,57 @@ class PullerTests(unittest.TestCase, SnapshotRulesMixin):
         same = FAILED_READ / "same-read-twice.json"
         changed = FAILED_READ / "same-read-with-one-fact-changed.json"
 
-        self.assertEqual(self.run_puller(same, out, today="2026-03-01").returncode, 0)
+        self.assertEqual(self.run_puller(same, out, today="2027-03-01").returncode, 0)
         first = out.read_bytes()
-        self.assertEqual(load(out)["pulled_at"], "2026-03-01")
+        self.assertEqual(load(out)["pulled_at"], "2027-03-01")
 
-        self.assertEqual(self.run_puller(same, out, today="2026-04-02").returncode, 0)
+        self.assertEqual(self.run_puller(same, out, today="2027-04-02").returncode, 0)
         self.assertEqual(out.read_bytes(), first,
                          "a pull that found nothing new must leave the file byte for byte")
 
-        self.assertEqual(self.run_puller(changed, out, today="2026-04-02").returncode, 0)
-        self.assertEqual(load(out)["pulled_at"], "2026-04-02",
+        self.assertEqual(self.run_puller(changed, out, today="2027-04-02").returncode, 0)
+        self.assertEqual(load(out)["pulled_at"], "2027-04-02",
                          "a pull that found a changed fact must carry that day")
+
+    def test_a_fact_dated_after_the_day_of_the_pull_is_refused(self):
+        # The rows of fixtures/failed-read/rows.json are dated up to
+        # 2026-10-26, so the same read is a good read on that day and a read
+        # carrying a day that has not happened on the one before it. A fact
+        # cannot be true as of a day in the future, whatever makes it so -- a
+        # clock, a time zone, a typo in a table.
+        out = self.tmpdir() / "facts.json"
+        same = FAILED_READ / "same-read-twice.json"
+
+        self.assertEqual(self.run_puller(same, out, today="2026-10-26").returncode, 0)
+
+        out.unlink()
+        refused = self.run_puller(same, out, today="2026-10-25")
+        self.assertNotEqual(refused.returncode, 0,
+                            "a fact dated after the day of the pull must be refused")
+        self.assertIn("is dated after the day of the pull (2026-10-25)", refused.stderr)
+        self.assertFalse(out.exists(), "a refused pull must write no snapshot")
+
+    def test_a_stamp_in_the_future_is_not_carried_forward(self):
+        # pulled_at is carried forward whenever a pull finds nothing new, so a
+        # stamp that got into the file ahead of the calendar -- a fast clock,
+        # a hand edit -- would be carried forward by every later pull and
+        # never looked at again, and the page would show a reader a day that
+        # has not come. The next pull replaces it with the day of the pull,
+        # which is a one-line diff to review rather than a file to repair.
+        out = self.tmpdir() / "facts.json"
+        same = FAILED_READ / "same-read-twice.json"
+
+        self.assertEqual(self.run_puller(same, out, today="2027-03-01").returncode, 0)
+        ahead = load(out)
+        ahead["pulled_at"] = "2099-01-01"
+        out.write_text(json.dumps(ahead, indent=2) + "\n", encoding="utf-8")
+        self.assertEqual(snapshot_problems(out, "2027-03-02"),
+                         ["pulled_at is dated after the day of the pull (2027-03-02): 2099-01-01"],
+                         "a snapshot stamped in the future must fail this suite too")
+
+        self.assertEqual(self.run_puller(same, out, today="2027-03-02").returncode, 0)
+        self.assertEqual(load(out)["pulled_at"], "2027-03-02")
+        self.assert_snapshot_is_sound(load(out), "2027-03-02")
 
     def test_a_bad_read_leaves_an_existing_snapshot_untouched(self):
         tmp = self.tmpdir()

@@ -26,10 +26,10 @@ import unittest
 from html.parser import HTMLParser
 from pathlib import Path
 
-# The one Python copy of "where a link may point", shared with the facts
-# snapshot's tests and checked against the puller's copy in
-# tests/test_links.py.
-from links import PAGES_PREFIX, REPO_PREFIX, allowed_link
+# "Where a link may point", asked of the one place it is written down:
+# scripts/pull-facts.js, through tests/rules.py. The page and the facts
+# snapshot are held to the same allowlist, by the same code.
+from rules import PAGES_PREFIX, REPO_PREFIX, allowed_links
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_HTML = ROOT / "index.html"
@@ -142,19 +142,20 @@ class LinksAllowedTests(unittest.TestCase):
 
     def test_every_link_is_relative_or_to_this_repo_or_its_pages_site(self):
         self.assertTrue(self.page.links, "expected at least one link on the page")
+        # The absolute ones go to the puller's allowlist in one call: it asks
+        # where a browser would land, so an address that begins with this
+        # repo's own and then walks out of it on a ".." segment is not inside
+        # it.
+        absolute = [link for link in self.page.links if link.startswith(("http://", "https://"))]
+        allowed = dict(zip(absolute, allowed_links(absolute)))
         for link in self.page.links:
             if link.startswith("//"):
                 self.fail(f"protocol-relative link leaves this site: {link!r}")
             if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", link) and not link.startswith(("http://", "https://")):
                 self.fail(f"link uses a disallowed scheme: {link!r}")
-            if link.startswith(("http://", "https://")):
-                # tests/links.py asks where a browser would land, so an
-                # address that begins with this repo's own and then walks out
-                # of it on a ".." segment is not inside it.
-                self.assertTrue(
-                    allowed_link(link),
-                    f"link leaves this repo's public pages: {link!r}",
-                )
+            if link in allowed:
+                self.assertTrue(allowed[link],
+                                f"link leaves this repo's public pages: {link!r}")
             else:
                 # A relative link must stay inside this site: no "../"
                 # escape, and no leading "/" either -- this site is served
@@ -184,7 +185,7 @@ class LinksAllowedTests(unittest.TestCase):
                                  f"the nightly check opens a red issue and freezes every merge")
 
     # No separate "not the private plugin repo" test: the allowlist in
-    # tests/links.py already requires every absolute link to match one of its
+    # The allowlist already requires every absolute link to match one of its
     # two prefixes exactly, with a boundary check on the character
     # that follows, so a link into the private repo (todd450/founding-agents,
     # without "-site") can never pass it. A standalone substring check for

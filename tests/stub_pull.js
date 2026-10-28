@@ -6,7 +6,9 @@
 //   node tests/stub_pull.js <scenario.json> <out.json> [YYYY-MM-DD]
 //
 // The last argument is the day the pull happens on, so a test can run the
-// same read weeks apart and see whether the snapshot's stamp moved.
+// same read weeks apart and see whether the snapshot's stamp moved, and a
+// scenario can be a read whose facts are dated after the day it happens on.
+// A scenario names its own day with "today"; the argument wins over it.
 //
 // The puller is handed a stubbed fetch built from the scenario, and the real
 // fetch is replaced with one that throws, so the suite makes no network call
@@ -96,7 +98,7 @@ async function main() {
     key: 'sb_publishable_stub',
     timeoutMs: STUB_TIMEOUT_MS,
     out,
-    today,
+    today: today || scenario.today,
   });
 }
 

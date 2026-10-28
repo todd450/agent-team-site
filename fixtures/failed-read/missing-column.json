@@ -3,6 +3,7 @@
   "why": "Every fact carries the date it is true as of. A row without one would reach the page undated.",
   "outcome": "fail",
   "runs": 1,
+  "fails": "as_of is not a date",
   "responses": {
     "costs": {
       "rows": [

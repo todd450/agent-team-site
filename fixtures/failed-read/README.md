@@ -13,6 +13,11 @@ every other table answers with those rows. `tests/test_facts.py` runs them throu
 `tests/stub_pull.js`, which hands the puller a stubbed `fetch` and makes the real one throw, so the
 suite never touches the network.
 
+What makes a row usable is written down in one place, `scripts/pull-facts.js` (decided on #27,
+28 Oct 2026). Each scenario here is a class of row it refuses; the suite checks the committed
+snapshot with that same definition, through `tests/rules.py`, so a read the puller accepts can
+never be a snapshot the checks then reject.
+
 | Scenario | The read |
 | --- | --- |
 | `same-read-twice.json` | the same four reads, run twice -- it must succeed, and twice over it must write byte-identical files, whatever day the second run happens on |
@@ -29,7 +34,11 @@ suite never touches the network.
 | `missing-column.json` | a row without its `as_of`, so a fact arrives with no date |
 | `empty-required-column.json` | a step whose `state` is the empty string, which `not null` in the tables does not stop |
 | `whitespace-only-required-column.json` | a measure whose `label` is spaces: not empty, and still nothing a reader can see |
-| `tab-only-required-column.json` | a record entry of one tab, which no renderer shows at all |
+| `tab-only-required-column.json` | a record entry of one tab: a control character, refused by code point |
+| `control-character-in-text.json` | a step whose `state` is one `U+001F`, which shows a reader nothing while passing for a value |
+| `zero-width-character-in-text.json` | a measure whose `label` is zero-width characters: neither empty nor whitespace, and nothing on the page |
+| `direction-override-in-text.json` | a fact carrying `U+202E`, which reorders what follows it, so the page and the snapshot say different things |
+| `as-of-after-the-day-of-the-pull.json` | a good read on a day earlier than the facts are dated: a fact cannot be true as of a day that has not happened |
 | `empty-optional-column.json` | the other side of that rule: `unit` and `standing` spelled `''` on purpose, which must still succeed |
 | `standing-outside-the-list.json` | a `standing` that is not `hit`, `pending` or `miss`, which the snapshot test would then refuse |
 | `standing-in-another-letter-case.json` | the same list in another letter case: `Hit` is not `hit` |
@@ -68,6 +77,8 @@ A scenario file:
   "name": "...",            // what the read does
   "outcome": "fail",        // "fail": exit non-zero, snapshot untouched. "ok": write the snapshot.
   "runs": 1,                // how many times to run the puller
+  "today": "2026-10-20",    // optional: the day the pull happens on, for a read whose facts are
+                            // dated relative to it. Left out, it is the day the suite runs.
   "fails": "...",           // optional: a fragment of the reason, which must appear on stderr,
                             // so a scenario drifting onto some other rule is a test failure
   "responses": {            // per table; every table not named answers from rows.json
